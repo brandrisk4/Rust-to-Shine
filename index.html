@@ -1,0 +1,1740 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Rust to Shine</title>
+<meta name="description" content="Soak, scrub, sand, sharpen, repair and repaint rusty tools and toys in 3D, then compare before and after.">
+<meta name="theme-color" content="#1C3A44">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Rust to Shine">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="fonts/fonts.css">
+<style>
+/* Layout: a workshop wall behind a green cutting mat (the canvas); job info strip on top, tool tray pinned to the bottom */
+:root {
+  --wall: #1C3A44;
+  --wall-2: #234B57;
+  --ink: #F3F1EC;
+  --ink-soft: rgba(243, 241, 236, .72);
+  --panel: #12272E;
+  --panel-2: #1B3740;
+  --line: rgba(243, 241, 236, .12);
+  --rust: #FF7A35;          /* the one accent: freshly exposed rust-orange */
+  --rust-ink: #2A1205;
+  --coin: #FFC93C;
+  --font-display: "Bungee", "Arial Black", Impact, sans-serif;
+  --font-body: "Manrope", "Helvetica Neue", Arial, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle, rgba(0, 0, 0, .28) 2.2px, transparent 2.6px) 0 0 / 22px 22px,
+    linear-gradient(180deg, var(--wall-2), var(--wall));
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.4;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  -webkit-user-select: none; user-select: none;
+  -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;
+  touch-action: none; overscroll-behavior: none;
+}
+#gl, #cv { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+#cv { pointer-events: none; }
+.gutter { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.coin {
+  display: inline-block; width: 1em; height: 1em; border-radius: 50%; flex: none; vertical-align: -.14em;
+  background: radial-gradient(circle at 35% 30%, #FFF4C2 0 16%, var(--coin) 18% 60%, #D99A00 62%);
+  box-shadow: inset 0 0 0 .09em #B47F00;
+}
+
+/* Top strip */
+.top {
+  position: fixed; inset: 0 0 auto; z-index: 2;
+  padding-top: calc(env(safe-area-inset-top, 0px) + 10px);
+  display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: start;
+}
+.icons { display: flex; gap: 8px; }
+.icon-btn {
+  width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel);
+  color: var(--ink); display: grid; place-items: center; cursor: pointer; touch-action: manipulation;
+}
+.icon-btn:focus-visible, .btn:focus-visible, .swatch:focus-visible, .item:focus-visible { outline: 3px solid var(--rust); outline-offset: 2px; }
+.job { display: grid; justify-items: center; text-align: center; gap: 6px; min-width: 0; }
+.job small { font-size: 11px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-soft); }
+#itemName { font-family: var(--font-display); font-size: 19px; line-height: 1.05; letter-spacing: .02em; }
+.steps { display: flex; gap: 5px; flex-wrap: wrap; justify-content: center; }
+.steps img {
+  width: 26px; height: 26px; border-radius: 8px; background: var(--panel); border: 1px solid var(--line); padding: 2px;
+  opacity: .45;
+}
+.steps img.done { opacity: 1; background: #2E6E57; border-color: transparent; }
+.steps img.now { opacity: 1; border-color: var(--rust); box-shadow: 0 0 0 2px var(--rust); }
+.coins-pill {
+  display: inline-flex; align-items: center; gap: 6px; height: 44px; padding: 0 12px 0 10px; border-radius: 12px;
+  background: var(--panel); border: 1px solid var(--line); font-weight: 800; font-size: 17px; font-variant-numeric: tabular-nums;
+}
+
+/* Tool tray */
+.tray {
+  position: fixed; inset: auto 0 0; z-index: 2;
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+  display: flex; justify-content: center; pointer-events: none;
+}
+.tray-card {
+  pointer-events: auto; width: 100%; max-width: 440px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 12px 14px;
+  display: grid; gap: 10px;
+}
+.tray-row { display: flex; align-items: center; gap: 12px; min-width: 0; }
+#toolIcon { width: 46px; height: 46px; flex: none; border-radius: 12px; background: var(--panel-2); padding: 4px; }
+.tray-text { min-width: 0; flex: 1; display: grid; gap: 6px; }
+#stepLabel { font-weight: 800; font-size: 16px; line-height: 1.2; }
+.bar { height: 8px; border-radius: 4px; background: var(--panel-2); overflow: hidden; }
+#barFill { height: 100%; width: 100%; background: var(--rust); transform-origin: left; transform: scaleX(0); transition: transform .15s; }
+.swatches { display: flex; gap: 8px; overflow-x: auto; padding: 2px; scrollbar-width: none; touch-action: pan-x; }
+.swatch {
+  width: 34px; height: 34px; border-radius: 50%; flex: none; border: 3px solid transparent; cursor: pointer;
+  box-shadow: inset 0 -4px 6px rgba(0, 0, 0, .25); touch-action: manipulation;
+}
+.swatch[aria-pressed="true"] { border-color: var(--ink); }
+
+/* Sheets */
+.screen {
+  position: fixed; inset: 0; z-index: 3; display: flex; flex-direction: column; justify-content: flex-end; align-items: center;
+  padding-top: calc(env(safe-area-inset-top, 0px) + 14px);
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 14px);
+  background: rgba(10, 22, 26, .45);
+}
+.sheet {
+  width: 100%; max-width: 420px; max-height: 100%; overflow: auto; touch-action: pan-y; overscroll-behavior: contain;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 24px; padding: 18px; display: grid; gap: 14px;
+}
+.sheet p { margin: 0; }
+.eyebrow { font-size: 12px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: var(--rust); }
+.sheet h2 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 26px; line-height: 1.1; text-wrap: balance; }
+.dim { color: var(--ink-soft); }
+.compare { position: relative; border-radius: 16px; overflow: hidden; background: #2F6E57; aspect-ratio: 4 / 3; touch-action: none; cursor: ew-resize; }
+.compare canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.compare .handle { position: absolute; top: 0; bottom: 0; width: 3px; background: var(--ink); transform: translateX(-50%); pointer-events: none; }
+.compare .handle::after {
+  content: "‹ ›"; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 36px; height: 36px; border-radius: 50%; background: var(--ink); color: var(--panel);
+  display: grid; place-items: center; font-weight: 800; font-size: 16px;
+}
+.tag { position: absolute; top: 10px; padding: 3px 8px; border-radius: 6px; background: rgba(10, 22, 26, .7); font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; pointer-events: none; }
+.tag.l { left: 10px; } .tag.r { right: 10px; }
+.reward { display: flex; align-items: center; gap: 10px; font-family: var(--font-display); font-size: 34px; }
+.reward .coin { width: 34px; height: 34px; }
+.row { display: flex; gap: 10px; }
+.btn {
+  appearance: none; border: 0; height: 52px; border-radius: 14px; padding: 0 16px; cursor: pointer; touch-action: manipulation;
+  font-family: var(--font-body); font-weight: 800; font-size: 17px; display: inline-flex; align-items: center; justify-content: center;
+}
+.btn.primary { flex: 1; background: var(--rust); color: var(--rust-ink); box-shadow: 0 4px 0 #B84A14; }
+.btn.primary:active { transform: translateY(3px); box-shadow: 0 1px 0 #B84A14; }
+.btn.ghost { background: var(--panel-2); color: var(--ink); border: 1px solid var(--line); }
+.shop-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.wallet { display: inline-flex; align-items: center; gap: 6px; font-weight: 800; font-size: 20px; }
+#shopMsg { min-height: 1.4em; font-size: 14px; }
+.grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.item {
+  appearance: none; border: 2px solid transparent; border-radius: 14px; background: var(--panel-2); color: var(--ink);
+  padding: 10px 4px 8px; display: grid; justify-items: center; gap: 4px; cursor: pointer; min-width: 0; font-family: var(--font-body); touch-action: manipulation;
+}
+.item i.chip { width: 42px; height: 42px; border-radius: 50%; box-shadow: inset 0 -5px 8px rgba(0, 0, 0, .3); }
+.item b { font-size: 13px; }
+.item span { font-size: 13px; color: var(--ink-soft); display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; }
+.item.owned span { color: #7CE3B0; font-weight: 800; }
+.item.locked i.chip { filter: saturate(.4) brightness(.7); }
+.item.shake { animation: shake .35s; }
+@keyframes shake { 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+.toast {
+  position: fixed; z-index: 2; left: 0; right: 0; top: 34%; text-align: center; pointer-events: none;
+  font-family: var(--font-display); font-size: 26px; color: var(--ink); text-shadow: 0 3px 0 rgba(0, 0, 0, .35); opacity: 0;
+}
+.toast.show { animation: pop 1.1s ease forwards; }
+@keyframes pop { 0% { opacity: 0; transform: scale(.8); } 15% { opacity: 1; transform: scale(1.05); } 30% { transform: none; } 75% { opacity: 1; } 100% { opacity: 0; transform: translateY(-12px); } }
+@media (prefers-reduced-motion: reduce) { .toast.show { animation: fadeonly 1.1s forwards; } @keyframes fadeonly { 0%, 80% { opacity: 1; } 100% { opacity: 0; } } }
+</style>
+</head>
+<body>
+
+<canvas id="gl" aria-label="Workbench. Rub, tap or drag on the item to restore it."></canvas>
+<canvas id="cv" aria-hidden="true"></canvas>
+
+<div class="top gutter">
+  <div class="icons">
+    <button class="icon-btn" id="mute" type="button" aria-label="Mute sound" aria-pressed="false">
+      <svg id="icoOn" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <svg id="icoOff" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" hidden><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16.5 9.5l5 5M21.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <button class="icon-btn" id="shopBtn" type="button" aria-label="Open the paint shop">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="7" y="8" width="10" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9 8V5h6v3M12 3v2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+  <div class="job">
+    <small id="jobLabel">Job 1</small>
+    <div id="itemName">Rusty Wrench</div>
+    <div class="steps" id="steps"></div>
+  </div>
+  <div class="coins-pill"><i class="coin"></i><span id="coins">0</span></div>
+</div>
+
+<div class="toast" id="toast" aria-live="polite"></div>
+
+<div class="tray gutter">
+  <div class="tray-card">
+    <div class="tray-row">
+      <img id="toolIcon" alt="">
+      <div class="tray-text">
+        <div id="stepLabel">Hold to soak it in vinegar</div>
+        <div class="bar"><div id="barFill"></div></div>
+      </div>
+    </div>
+    <div class="swatches" id="swatches" hidden></div>
+  </div>
+</div>
+
+<div class="screen gutter" id="done" hidden>
+  <div class="sheet">
+    <div class="eyebrow" id="doneLabel">Job 1 done</div>
+    <h2 id="doneTitle">Wrench restored</h2>
+    <div class="compare" id="compare">
+      <span class="tag l">Before</span><span class="tag r">After</span>
+      <div class="handle" id="handle"></div>
+    </div>
+    <p class="dim">Drag across the picture to compare.</p>
+    <div class="reward"><i class="coin"></i><span id="doneCoins">+0</span></div>
+    <div class="row">
+      <button class="btn primary" id="nextBtn" type="button">Next job</button>
+      <button class="btn ghost" id="shopBtn2" type="button">Paint shop</button>
+    </div>
+  </div>
+</div>
+
+<div class="screen gutter" id="shop" hidden>
+  <div class="sheet" role="dialog" aria-label="Paint shop">
+    <div class="shop-head"><h2>Paint Shop</h2><span class="wallet"><i class="coin"></i><span id="shopCoins">0</span></span></div>
+    <p id="shopMsg" class="dim">Colors you own show up whenever a job needs paint.</p>
+    <div class="grid" id="shopGrid"></div>
+    <button class="btn primary" id="shopDone" type="button">Done</button>
+  </div>
+</div>
+
+<script src="three.min.js"></script>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const THREE = window.THREE;
+  if (!THREE) { $('stepLabel').textContent = 'The 3D engine did not load. Check your connection and reload.'; return; }
+  const TAU = Math.PI * 2;
+  const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function rngFor(seed) {
+    let a = seed >>> 0;
+    return () => {
+      a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  // ---------- Canvas helpers (items are drawn in a 400 × 300 design box) ----------
+  const BW = 400, BH = 300, R = 2, SW = 100, SH = 75;
+  function mk(w = BW * R, h = BH * R) {
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    const g = c.getContext('2d'); g.setTransform(w / BW, 0, 0, h / BH, 0, 0);
+    return [c, g];
+  }
+  // Run fn in raw pixel space (for whole-canvas compositing).
+  function px(g, fn) { g.save(); g.setTransform(1, 0, 0, 1, 0, 0); fn(); g.restore(); }
+  function cut(g, fn) { g.save(); g.globalCompositeOperation = 'destination-out'; g.fillStyle = g.strokeStyle = '#000'; fn(); g.restore(); }
+  function rr(g, x, y, w, h, r) { g.beginPath(); g.roundRect(x, y, w, h, r); g.fill(); }
+  function circ(g, x, y, r) { g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill(); }
+  function poly(g, pts) { g.beginPath(); pts.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y))); g.closePath(); g.fill(); }
+  const small = mk(SW, SH);
+  function alphaData(c) { const g = small[1]; px(g, () => { g.clearRect(0, 0, SW, SH); g.drawImage(c, 0, 0, SW, SH); }); return g.getImageData(0, 0, SW, SH).data; }
+  function countAlpha(c, min = 14) { const d = alphaData(c); let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > min) n++; return n; }
+
+  // ---------- Items ----------
+  const ITEMS = [
+    {
+      id: 'wrench', name: 'Rusty Wrench', rust: 0.7, dirt: 0.4,
+      steps: ['soak', 'rust', 'polish'],
+      rustOn: ['metal'],
+      regions: {
+        metal(g) {
+          rr(g, 95, 134, 210, 32, 14); circ(g, 70, 150, 50); circ(g, 332, 150, 42);
+          cut(g, () => { g.fillRect(0, 134, 64, 32); circ(g, 64, 150, 16); g.beginPath(); for (let i = 0; i < 6; i++) { const a = (i / 6) * TAU; g.lineTo(332 + Math.cos(a) * 19, 150 + Math.sin(a) * 19); } g.fill(); });
+        },
+      },
+      details(g) {
+        g.fillStyle = 'rgba(0,0,0,.13)'; rr(g, 128, 143, 144, 14, 7);
+        g.fillStyle = 'rgba(0,0,0,.28)'; g.font = '800 9px Manrope, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+        g.fillText('DROP FORGED · 16 MM', 200, 150.5);
+      },
+    },
+    {
+      id: 'padlock', name: 'Old Padlock', rust: 0.55, dirt: 0.5, body: '#B03A2E', paint: 'red',
+      steps: ['wash', 'rust', 'strip', 'paint', 'polish'],
+      rustOn: ['metal', 'body'],
+      regions: {
+        metal(g) {
+          g.lineWidth = 26; g.lineCap = 'butt'; g.strokeStyle = '#fff';
+          g.beginPath(); g.moveTo(148, 140); g.lineTo(148, 98); g.arc(200, 98, 52, Math.PI, 0); g.lineTo(252, 140); g.stroke();
+          circ(g, 200, 196, 24);
+          for (const [x, y] of [[124, 134], [276, 134], [124, 256], [276, 256]]) circ(g, x, y, 5);
+        },
+        body(g) { rr(g, 110, 120, 180, 150, 22); },
+      },
+      details(g) {
+        g.fillStyle = '#1D1F22'; circ(g, 200, 190, 8); poly(g, [[195, 190], [205, 190], [208, 213], [192, 213]]);
+        g.fillStyle = 'rgba(255,255,255,.2)'; g.font = '800 13px Manrope, sans-serif'; g.textAlign = 'center';
+        g.fillText('HEAVY DUTY', 200, 158);
+      },
+    },
+    {
+      id: 'knife', name: 'Kitchen Knife', rust: 0.65, dirt: 0,
+      steps: ['soakKnife', 'rustFine', 'sharpen', 'grime', 'oil'],
+      rustOn: ['metal'],
+      edge: [62, 163, 248, 174],
+      regions: {
+        metal(g) {
+          g.beginPath(); g.moveTo(252, 128); g.lineTo(110, 128); g.quadraticCurveTo(70, 130, 36, 152);
+          g.quadraticCurveTo(80, 172, 140, 175); g.lineTo(252, 175); g.closePath(); g.fill();
+          rr(g, 248, 126, 16, 51, 4);
+          for (const x of [292, 322, 352]) circ(g, x, 152, 5.5);
+        },
+        wood(g) { rr(g, 262, 132, 120, 40, 18); },
+      },
+      details(g) {
+        g.strokeStyle = 'rgba(255,255,255,.4)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(240, 130); g.lineTo(112, 130); g.stroke();
+        g.fillStyle = 'rgba(0,0,0,.25)'; g.font = '800 8px Manrope, sans-serif'; g.fillText('No. 7 · CARBON STEEL', 168, 146);
+      },
+    },
+    {
+      id: 'car', name: 'Tin Toy Car', rust: 0.5, dirt: 0.6, body: '#2E6DB4', paint: 'blue',
+      steps: ['wash', 'rust', 'strip', 'part', 'paint', 'polish'],
+      rustOn: ['metal', 'body'],
+      part: {
+        name: 'wheel', target: [120, 196], start: [330, 268], r: 30,
+        draw(g, x, y) {
+          g.fillStyle = rubberGrad(g, x, y, 26); circ(g, x, y, 26);
+          g.fillStyle = metalGrad(g, y - 11, y + 11); circ(g, x, y, 11);
+          g.fillStyle = 'rgba(0,0,0,.35)'; circ(g, x, y, 3);
+        },
+      },
+      regions: {
+        metal(g) {
+          rr(g, 44, 176, 24, 12, 5); rr(g, 338, 174, 22, 12, 5); circ(g, 345, 152, 7); rr(g, 228, 140, 14, 4, 2);
+          circ(g, 290, 196, 11);
+        },
+        glass(g) {
+          g.beginPath(); g.moveTo(155, 130); g.quadraticCurveTo(172, 104, 205, 101); g.lineTo(208, 101); g.lineTo(208, 130); g.closePath(); g.fill();
+          g.beginPath(); g.moveTo(216, 101); g.lineTo(252, 101); g.quadraticCurveTo(276, 104, 288, 130); g.lineTo(216, 130); g.closePath(); g.fill();
+        },
+        body(g) {
+          g.beginPath(); g.moveTo(58, 190); g.lineTo(58, 160); g.quadraticCurveTo(60, 140, 95, 136); g.lineTo(140, 132);
+          g.quadraticCurveTo(165, 94, 205, 91); g.lineTo(255, 91); g.quadraticCurveTo(286, 94, 302, 130); g.lineTo(335, 136);
+          g.quadraticCurveTo(352, 142, 350, 165); g.lineTo(350, 190); g.closePath(); g.fill();
+          cut(g, () => { circ(g, 120, 196, 31); circ(g, 290, 196, 31); });
+        },
+        rubber(g) { circ(g, 290, 196, 26); },
+      },
+      details(g) {
+        g.strokeStyle = 'rgba(0,0,0,.28)'; g.lineWidth = 1.5;
+        g.beginPath(); g.moveTo(212, 101); g.lineTo(212, 186); g.moveTo(160, 134); g.lineTo(160, 186); g.stroke();
+        g.fillStyle = '#FFFFFF'; circ(g, 186, 160, 14);
+        g.fillStyle = '#1D1F22'; g.font = '800 17px Manrope, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('7', 186, 161);
+        g.fillStyle = '#E2483B'; rr(g, 58, 156, 6, 12, 2);
+      },
+    },
+    {
+      id: 'lantern', name: 'Camping Lantern', rust: 0.6, dirt: 0.55, body: '#1F6B4F', paint: 'green',
+      steps: ['screwsOut', 'wash', 'rust', 'part', 'paint', 'screwsIn'],
+      rustOn: ['metal', 'body'],
+      screws: [[143, 99], [257, 99], [143, 232], [257, 232]],
+      part: {
+        name: 'glass', target: [200, 165], start: [64, 190], r: 60,
+        draw(g, x, y) {
+          g.fillStyle = 'rgba(200,236,255,.28)'; g.fillRect(x - 52, y - 62, 104, 125);
+          g.fillStyle = 'rgba(255,255,255,.45)'; poly(g, [[x - 40, y - 62], [x - 22, y - 62], [x - 48, y + 63], [x - 52, y + 63], [x - 52, y - 30]]);
+          g.strokeStyle = 'rgba(255,255,255,.6)'; g.lineWidth = 1.5; g.strokeRect(x - 52, y - 62, 104, 125);
+        },
+        drawOld(g, x, y) {
+          g.fillStyle = 'rgba(120,140,110,.55)'; g.fillRect(x - 52, y - 62, 104, 125);
+          g.strokeStyle = 'rgba(255,255,255,.8)'; g.lineWidth = 1.4; g.beginPath();
+          g.moveTo(x - 10, y - 10); g.lineTo(x - 52, y - 40); g.moveTo(x - 10, y - 10); g.lineTo(x + 30, y - 62); g.moveTo(x - 10, y - 10); g.lineTo(x + 52, y + 20);
+          g.moveTo(x - 10, y - 10); g.lineTo(x - 30, y + 63); g.moveTo(x - 10, y - 10); g.lineTo(x + 12, y + 30); g.lineTo(x + 40, y + 63); g.stroke();
+        },
+      },
+      regions: {
+        metal(g) {
+          g.lineWidth = 7; g.strokeStyle = '#fff'; g.beginPath(); g.arc(200, 66, 28, Math.PI, 0); g.stroke();
+          g.fillRect(136, 95, 12, 141); g.fillRect(252, 95, 12, 141); g.fillRect(136, 95, 128, 9); g.fillRect(136, 227, 128, 9);
+          rr(g, 116, 262, 168, 11, 4);
+        },
+        body(g) { poly(g, [[152, 66], [248, 66], [272, 95], [128, 95]]); rr(g, 124, 236, 152, 28, 8); },
+      },
+      details(g, st) {
+        const cg = g.createLinearGradient(188, 0, 212, 0); cg.addColorStop(0, '#E9DFC8'); cg.addColorStop(0.5, '#FFF8E8'); cg.addColorStop(1, '#D9CCAE');
+        g.fillStyle = cg; g.fillRect(188, 168, 24, 59);
+        g.strokeStyle = '#3B2B20'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(200, 168); g.lineTo(200, 160); g.stroke();
+        if (st.finished) {
+          const fg = g.createRadialGradient(200, 150, 2, 200, 150, 40); fg.addColorStop(0, 'rgba(255,214,120,.9)'); fg.addColorStop(1, 'rgba(255,170,60,0)');
+          g.fillStyle = fg; circ(g, 200, 150, 40);
+          g.fillStyle = '#FFB13B'; g.beginPath(); g.ellipse(200, 152, 5, 10, 0, 0, TAU); g.fill();
+          g.fillStyle = '#FFF2C4'; g.beginPath(); g.ellipse(200, 154, 2.5, 5, 0, 0, TAU); g.fill();
+        }
+      },
+    },
+    {
+      id: 'can', name: 'Watering Can', rust: 0.55, dirt: 0.6, body: '#2F8C8C', paint: 'mint',
+      steps: ['wash', 'dents', 'rust', 'strip', 'paint'],
+      rustOn: ['metal', 'body'],
+      dents: [[172, 168, 17], [238, 192, 20], [200, 222, 13]],
+      regions: {
+        metal(g) {
+          g.strokeStyle = '#fff'; g.lineCap = 'round';
+          g.lineWidth = 15; g.beginPath(); g.moveTo(138, 212); g.lineTo(58, 128); g.stroke();
+          circ(g, 50, 120, 15);
+          g.lineWidth = 11; g.beginPath(); g.moveTo(165, 120); g.bezierCurveTo(172, 66, 248, 66, 255, 120); g.stroke();
+          g.beginPath(); g.moveTo(288, 142); g.bezierCurveTo(338, 146, 338, 214, 288, 220); g.stroke();
+          g.fillRect(128, 116, 164, 9); g.fillRect(128, 243, 164, 9);
+        },
+        body(g) { rr(g, 130, 118, 160, 132, 18); },
+      },
+      details(g) {
+        g.fillStyle = 'rgba(0,0,0,.45)';
+        for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++) if (i * i + j * j <= 5) circ(g, 50 + i * 4.5, 120 + j * 4.5, 1.2);
+        g.strokeStyle = 'rgba(0,0,0,.15)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(270, 126); g.lineTo(270, 242); g.stroke();
+      },
+    },
+    {
+      id: 'pan', name: 'Cast Iron Pan', rust: 0.85, dirt: 0.3,
+      steps: ['soak', 'rust', 'dull', 'season'],
+      rustOn: ['iron'],
+      regions: {
+        iron(g) {
+          circ(g, 168, 150, 106); rr(g, 262, 137, 126, 26, 13);
+          cut(g, () => circ(g, 368, 150, 6.5));
+        },
+      },
+      details(g) {
+        g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = 3; g.beginPath(); g.arc(168, 150, 92, 0, TAU); g.stroke();
+        g.strokeStyle = 'rgba(255,255,255,.12)'; g.lineWidth = 2; g.beginPath(); g.arc(168, 150, 95, Math.PI * 1.05, Math.PI * 1.7); g.stroke();
+        g.fillStyle = 'rgba(0,0,0,.3)'; g.font = '800 10px Manrope, sans-serif'; g.textAlign = 'center'; g.fillText('No. 10', 316, 154);
+      },
+    },
+    {
+      id: 'hammer', name: 'Claw Hammer', rust: 0.7, dirt: 0.35,
+      steps: ['rust', 'dull', 'grime', 'oil', 'polish'],
+      rustOn: ['metal'],
+      regions: {
+        metal(g) {
+          rr(g, 76, 104, 146, 42, 10); rr(g, 54, 100, 32, 50, 7);
+          g.beginPath(); g.moveTo(214, 106); g.quadraticCurveTo(280, 96, 310, 146); g.lineTo(298, 152); g.quadraticCurveTo(272, 122, 214, 132); g.closePath(); g.fill();
+        },
+        wood(g) { rr(g, 160, 136, 36, 150, 15); },
+      },
+      details(g) {
+        g.strokeStyle = 'rgba(0,0,0,.3)'; g.lineWidth = 2; g.beginPath(); g.moveTo(232, 116); g.quadraticCurveTo(272, 112, 300, 146); g.stroke();
+        g.fillStyle = 'rgba(0,0,0,.25)'; g.font = '800 9px Manrope, sans-serif'; g.textAlign = 'center'; g.fillText('FORGED 16 OZ', 150, 129);
+      },
+    },
+  ];
+
+  const STEPS = {
+    soak: { type: 'soak', tool: 'tub', label: 'Hold anywhere to soak it in vinegar' },
+    soakKnife: { type: 'soak', tool: 'tub', label: 'Hold to soak the blade in vinegar' },
+    wash: { type: 'rub', layer: 'dirt', tool: 'sponge', label: 'Scrub off the dirt', strength: 0.55 },
+    rust: { type: 'rub', layer: 'rust', tool: 'brush', label: 'Wire-brush the rust away', strength: 0.2 },
+    rustFine: { type: 'rub', layer: 'rust', tool: 'sandpaper', label: 'Sand the rust off the blade', strength: 0.2 },
+    dull: { type: 'rub', layer: 'dull', tool: 'sandpaper', label: 'Sand the metal smooth with fine grit', strength: 0.32 },
+    strip: { type: 'rub', layer: 'oldpaint', tool: 'scraper', label: 'Scrape off the old paint', strength: 0.3 },
+    grime: { type: 'rub', layer: 'grime', tool: 'sandpaper', label: 'Sand the weathered handle', strength: 0.3 },
+    paint: { type: 'rub', layer: 'paint', tool: 'spray', label: 'Pick a color and spray it on', strength: 0.32, reveal: true },
+    oil: { type: 'rub', layer: 'oil', tool: 'oil', label: 'Rub in oil to protect the wood', strength: 0.38, reveal: true },
+    season: { type: 'rub', layer: 'oil', tool: 'oil', label: 'Season the iron with oil', strength: 0.36, reveal: true },
+    polish: { type: 'rub', layer: 'polish', tool: 'cloth', label: 'Polish it to a shine', strength: 0.3, reveal: true },
+    screwsOut: { type: 'screws', out: true, tool: 'screwdriver', label: 'Tap each screw to take it out' },
+    screwsIn: { type: 'screws', out: false, tool: 'screwdriver', label: 'Tap each hole to put in a new screw' },
+    part: { type: 'part', tool: 'hand', label: 'Drag the new part into place' },
+    dents: { type: 'dents', tool: 'hammer', label: 'Tap the dents to hammer them out' },
+    sharpen: { type: 'sharpen', tool: 'stone', label: 'Swipe back and forth along the edge' },
+  };
+
+  const PAINTS = [
+    { id: 'red', name: 'Cherry', price: 0, c: ['#EE5544', '#A62418'] },
+    { id: 'blue', name: 'Cobalt', price: 0, c: ['#4A86F0', '#1C4BA8'] },
+    { id: 'yellow', name: 'Sunflower', price: 0, c: ['#FFD94A', '#D49A00'] },
+    { id: 'green', name: 'Racing Green', price: 0, c: ['#2E9467', '#12553A'] },
+    { id: 'mint', name: 'Mint', price: 0, c: ['#8EEBC9', '#3BB58A'] },
+    { id: 'orange', name: 'Tangerine', price: 40, c: ['#FF9A4A', '#D2560F'] },
+    { id: 'pink', name: 'Bubblegum', price: 60, c: ['#FF8CC6', '#D63E8C'] },
+    { id: 'purple', name: 'Grape', price: 80, c: ['#A675F0', '#5E2FB8'] },
+    { id: 'black', name: 'Matte Black', price: 110, c: ['#3B3E45', '#141518'] },
+    { id: 'white', name: 'Pearl', price: 140, c: ['#FFFFFF', '#C9CFD8'] },
+    { id: 'chrome', name: 'Chrome', price: 240, c: ['#F4F7FA', '#7D8792'], metal: true },
+    { id: 'gold', name: 'Gold', price: 340, c: ['#FFF0A8', '#B5850A'], metal: true },
+    { id: 'galaxy', name: 'Galaxy', price: 480, c: ['#5C3BB8', '#130A33'], galaxy: true },
+  ];
+
+  // ---------- Save (this device only) ----------
+  const SAVE_KEY = 'rusttoshine.save.v1';
+  const save = { level: 1, coins: 0, paints: PAINTS.filter((p) => !p.price).map((p) => p.id), muted: false };
+  try { Object.assign(save, JSON.parse(localStorage.getItem(SAVE_KEY)) || {}); } catch { /* fresh start */ }
+  if (!Array.isArray(save.paints)) save.paints = [];
+  PAINTS.filter((p) => !p.price).forEach((p) => { if (!save.paints.includes(p.id)) save.paints.push(p.id); });
+  save.level = Math.max(1, save.level | 0);
+  save.coins = Math.max(0, save.coins | 0);
+  function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch { /* storage unavailable */ } }
+
+  // ---------- Region styling ----------
+  function metalGrad(g, y0, y1) {
+    const gr = g.createLinearGradient(0, y0, 0, y1);
+    gr.addColorStop(0, '#F4F7F9'); gr.addColorStop(0.3, '#BAC2CA'); gr.addColorStop(0.5, '#E3E8ED'); gr.addColorStop(0.78, '#8D97A2'); gr.addColorStop(1, '#C5CCD3');
+    return gr;
+  }
+  function rubberGrad(g, x, y, r) { const gr = g.createRadialGradient(x - r * 0.3, y - r * 0.3, 2, x, y, r); gr.addColorStop(0, '#4A4A52'); gr.addColorStop(1, '#141418'); return gr; }
+  const noise = (g, rng, n, colors, size = 1.2) => { for (let i = 0; i < n; i++) { g.fillStyle = colors[i % colors.length]; g.fillRect(rng() * BW, rng() * BH, size, size); } };
+  const STYLE = {
+    metal(g, rng) {
+      g.fillStyle = metalGrad(g, 60, 260); g.fillRect(0, 0, BW, BH);
+      for (let i = 0; i < 160; i++) { g.fillStyle = i % 2 ? 'rgba(255,255,255,.12)' : 'rgba(0,0,0,.06)'; g.fillRect(rng() * BW, rng() * BH, 20 + rng() * 60, 0.6); }
+    },
+    iron(g, rng) {
+      const gr = g.createLinearGradient(0, 40, 0, 260); gr.addColorStop(0, '#6A6E75'); gr.addColorStop(1, '#3A3D42');
+      g.fillStyle = gr; g.fillRect(0, 0, BW, BH);
+      noise(g, rng, 5000, ['rgba(255,255,255,.08)', 'rgba(0,0,0,.12)']);
+    },
+    body(g, rng) { g.fillStyle = '#A3A7AC'; g.fillRect(0, 0, BW, BH); noise(g, rng, 3000, ['rgba(255,255,255,.1)', 'rgba(0,0,0,.08)']); },
+    wood(g, rng) {
+      g.fillStyle = '#DDAE74'; g.fillRect(0, 0, BW, BH);
+      g.strokeStyle = 'rgba(150,95,45,.45)'; g.lineWidth = 1.2;
+      for (let i = 0; i < 40; i++) {
+        const vertical = i % 2, o = rng() * (vertical ? BW : BH), f = 0.02 + rng() * 0.03, a = 2 + rng() * 3;
+        g.beginPath();
+        for (let t = 0; t <= (vertical ? BH : BW); t += 6) { const p = o + Math.sin(t * f) * a; vertical ? (t ? g.lineTo(p, t) : g.moveTo(p, t)) : (t ? g.lineTo(t, p) : g.moveTo(t, p)); }
+        g.stroke();
+      }
+    },
+    rubber(g) { const gr = g.createLinearGradient(0, 160, 0, 230); gr.addColorStop(0, '#45454D'); gr.addColorStop(1, '#141418'); g.fillStyle = gr; g.fillRect(0, 0, BW, BH); },
+    glass(g) {
+      const gr = g.createLinearGradient(0, 90, 0, 135); gr.addColorStop(0, '#D8F0FB'); gr.addColorStop(1, '#8FC3DC');
+      g.fillStyle = gr; g.fillRect(0, 0, BW, BH);
+      g.fillStyle = 'rgba(255,255,255,.5)'; for (let x = 160; x < 300; x += 60) poly(g, [[x, 90], [x + 10, 90], [x - 14, 135], [x - 24, 135]]);
+    },
+  };
+  const PRIORITY = ['metal', 'glass', 'body', 'rubber', 'wood', 'iron'];
+
+  function intoMask(c, mask) { px(c.getContext('2d'), () => { const g = c.getContext('2d'); g.globalCompositeOperation = 'destination-in'; g.drawImage(mask, 0, 0); }); return c; }
+
+
+  // ---------- Job state ----------
+  let job = null;
+  const [itemCv, itemG] = mk();
+  const [tmpCv, tmpG] = mk();
+  const [bleedCv, bleedG] = mk();
+  const [sCv, sG] = mk(BW, BH);
+  // How thick each kind of material stands up off the mat (in mm-ish units, scaled by HS below).
+  const THICK = { metal: 0.8, iron: 1, body: 1.3, wood: 1.1, rubber: 1.3, glass: 0.6 };
+  const ITEM_3D = {
+    wrench: { thick: { metal: 0.75 } },
+    padlock: { thick: { body: 1.5, metal: 1.2 } },
+    knife: { thick: { metal: 0.45, wood: 1.0 } },
+    car: { thick: { body: 1.7, glass: 1.75, rubber: 1.6, metal: 1.5 }, part: 1.6, partSize: [62, 62] },
+    lantern: { thick: { metal: 1.0, body: 1.3 }, part: 0.45, partSize: [112, 134], glassPart: true, light: [200, 150] },
+    can: { thick: { body: 1.6, metal: 1.0 } },
+    pan: { thick: { iron: 1.1 }, dish: [168, 150, 92] },
+    hammer: { thick: { metal: 1.3, wood: 1.0 } },
+  };
+  const ROUGH = { metal: 0.36, iron: 0.55, body: 0.85, wood: 0.8, rubber: 0.9, glass: 0.06 };
+  const METAL = { metal: 1, iron: 0.8, body: 0, wood: 0, rubber: 0, glass: 0 };
+  const LAYER_ROUGH = { dull: 0.75, grime: 0.95, oldpaint: 0.65, rust: 1, dirt: 1 };
+  const LAYER_METAL = { dull: 0.5, grime: 0, oldpaint: 0, rust: 0.05, dirt: 0 };
+  const gray = (v) => { const n = Math.round(clamp(v, 0, 1) * 255); return `rgb(${n},${n},${n})`; };
+  function tinted(src, v, w = BW, h = BH) {
+    const [c, g] = mk(w, h);
+    px(g, () => { g.drawImage(src, 0, 0, w, h); g.globalCompositeOperation = 'source-in'; g.fillStyle = gray(v); g.fillRect(0, 0, w, h); });
+    return c;
+  }
+
+  function buildJob(n) {
+    const item = ITEMS[(n - 1) % ITEMS.length];
+    const cycle = Math.floor((n - 1) / ITEMS.length);
+    const rng = rngFor(n * 7919 + 11);
+    const J = { n, item, cycle, rng, cfg: ITEM_3D[item.id], masks: {}, layers: {}, reveals: {}, full: {}, stepIdx: 0, finished: false, soaked: false, soakLevel: 0, paintId: null };
+    // Region masks: higher-priority regions sit on top and are cut out of lower ones.
+    const [occ, og] = mk();
+    for (const r of PRIORITY) {
+      if (!item.regions[r]) continue;
+      const [c, g] = mk(); g.fillStyle = g.strokeStyle = '#fff'; item.regions[r](g);
+      px(g, () => { g.globalCompositeOperation = 'destination-out'; g.drawImage(occ, 0, 0); });
+      px(og, () => og.drawImage(c, 0, 0));
+      J.masks[r] = c;
+    }
+    J.masks.all = occ;
+    // Base art (real lighting supplies the bevels now)
+    const [base, bg] = mk();
+    for (const r of [...PRIORITY].reverse()) {
+      if (!J.masks[r]) continue;
+      const [c, g] = mk(); STYLE[r](g, rngFor(n + r.length));
+      intoMask(c, J.masks[r]);
+      px(bg, () => bg.drawImage(c, 0, 0));
+    }
+    J.base = base;
+    const has = (layer) => item.steps.some((s) => STEPS[s].layer === layer);
+    const union = (names) => { const [c, g] = mk(); names.forEach((nm) => J.masks[nm] && px(g, () => g.drawImage(J.masks[nm], 0, 0))); return c; };
+    const metalish = J.masks.metal ? 'metal' : 'iron';
+    const amount = clamp(item.rust + cycle * 0.08, 0, 0.95);
+    J.layers.rust = makeRust(union(item.rustOn), amount, rng);
+    if (item.dirt) J.layers.dirt = makeDirt(J.masks.all, item.dirt + cycle * 0.05, rng);
+    if (J.masks.body) J.layers.oldpaint = makeOldPaint(J.masks.body, item.body, rng);
+    if (has('dull')) J.layers.dull = makeFlat(J.masks[metalish], 'rgba(120,118,112,.78)', rng);
+    if (has('grime')) J.layers.grime = makeGrime(J.masks.wood, rng);
+    if (has('paint')) { J.paintId = save.paints.includes(item.paint) ? item.paint : save.paints[0]; J.full.paint = makePaint(J.masks.body, J.paintId, rng); }
+    if (has('oil')) J.full.oil = makeOil(J.masks.wood || J.masks.iron, !J.masks.wood);
+    if (has('polish')) J.full.polish = makeShine(J.masks.metal, rng);
+    for (const k of Object.keys(J.full)) J.reveals[k] = mk()[0];
+    J.initial = {};
+    for (const [k, c] of Object.entries(J.layers)) J.initial[k] = Math.max(1, countAlpha(c));
+    J.regionCount = {};
+    for (const [k, nm] of [['paint', 'body'], ['oil', J.masks.wood ? 'wood' : 'iron'], ['polish', 'metal']]) if (J.full[k]) { J.regionCount[k] = { mask: alphaData(J.masks[nm]) }; }
+    J.screws = (item.screws || []).map(([x, y]) => ({ x, y, state: 'in', rusty: true, t: 0 }));
+    J.dents = (item.dents || []).map(([x, y, r]) => ({ x, y, r, hits: 0 }));
+    J.part = item.part ? { x: item.part.start[0], y: item.part.start[1], placed: false, oldFall: null } : null;
+    J.edgeProgress = 0;
+    J.samples = {};
+    for (const k of Object.keys(J.layers)) J.samples[k] = alphaData(J.layers[k]);
+    // Material maps that never change during the job
+    const [rb, rbg] = mk(BW, BH), [mb, mbg] = mk(BW, BH);
+    for (const r of [...PRIORITY].reverse()) {
+      if (!J.masks[r]) continue;
+      rbg.drawImage(tinted(J.masks[r], ROUGH[r]), 0, 0);
+      mbg.drawImage(tinted(J.masks[r], METAL[r]), 0, 0);
+    }
+    J.roughBase = rb; J.metalBase = mb;
+    if (J.dents.length) J.bodyF = maskFloat(J.masks.body);
+    buildHeights(J);
+    return J;
+  }
+
+  // ---------- Height field (turns the flat art into a 3D object) ----------
+  const hmCv = document.createElement('canvas'); hmCv.width = BW; hmCv.height = BH;
+  const hmG = hmCv.getContext('2d', { willReadFrequently: true });
+  function maskFloat(c) {
+    hmG.clearRect(0, 0, BW, BH); hmG.drawImage(c, 0, 0, BW, BH);
+    const d = hmG.getImageData(0, 0, BW, BH).data, out = new Float32Array(BW * BH);
+    for (let i = 0; i < out.length; i++) out[i] = d[i * 4 + 3] / 255;
+    return out;
+  }
+  function blur1(src, w, h, r) {
+    const tmp = new Float32Array(w * h), out = new Float32Array(w * h), k = 2 * r + 1;
+    for (let y = 0; y < h; y++) {
+      const row = y * w; let acc = 0;
+      for (let x = -r; x <= r; x++) acc += src[row + clamp(x, 0, w - 1)];
+      for (let x = 0; x < w; x++) { tmp[row + x] = acc / k; acc += src[row + Math.min(w - 1, x + r + 1)] - src[row + Math.max(0, x - r)]; }
+    }
+    for (let x = 0; x < w; x++) {
+      let acc = 0;
+      for (let y = -r; y <= r; y++) acc += tmp[clamp(y, 0, h - 1) * w + x];
+      for (let y = 0; y < h; y++) { out[y * w + x] = acc / k; acc += tmp[Math.min(h - 1, y + r + 1) * w + x] - tmp[Math.max(0, y - r) * w + x]; }
+    }
+    return out;
+  }
+  // Rounded "pillow" profile: low at the edges, full height once you are a few px inside.
+  function pillow(m, r) {
+    const b = blur1(blur1(m, BW, BH, r), BW, BH, r), out = new Float32Array(m.length);
+    for (let i = 0; i < m.length; i++) {
+      if (m[i] < 0.02) continue;
+      const t = clamp((b[i] - 0.5) / 0.45, 0, 1);
+      out[i] = m[i] * (0.35 + 0.65 * t * t * (3 - 2 * t));
+    }
+    return out;
+  }
+  function buildHeights(J) {
+    const th = { ...THICK, ...(J.cfg.thick || {}) }, Hh = new Float32Array(BW * BH);
+    for (const r of PRIORITY) {
+      if (!J.masks[r]) continue;
+      const p = pillow(maskFloat(J.masks[r]), 5);
+      for (let i = 0; i < Hh.length; i++) if (p[i] * th[r] > Hh[i]) Hh[i] = p[i] * th[r];
+    }
+    if (J.cfg.dish) {
+      const [cx, cy, rr0] = J.cfg.dish;
+      for (let y = 0; y < BH; y++) for (let x = 0; x < BW; x++) {
+        const d = Math.hypot(x - cx, y - cy);
+        if (d < rr0) { const t = clamp((rr0 - d) / 9, 0, 1); Hh[y * BW + x] -= 0.55 * t * t * (3 - 2 * t); }
+      }
+    }
+    J.baseH = Hh; J.partH = null;
+  }
+  function heightsNow(J) {
+    const Hh = new Float32Array(J.baseH);
+    if (J.partH) for (let i = 0; i < Hh.length; i++) if (J.partH[i] > Hh[i]) Hh[i] = J.partH[i];
+    for (const d of J.dents) {
+      const depth = (0.5 * (3 - d.hits)) / 3;
+      if (depth <= 0) continue;
+      const r = d.r, x0 = Math.max(0, Math.floor(d.x - r * 1.8)), x1 = Math.min(BW - 1, Math.ceil(d.x + r * 1.8));
+      const y0 = Math.max(0, Math.floor(d.y - r * 1.8)), y1 = Math.min(BH - 1, Math.ceil(d.y + r * 1.8));
+      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+        const i = y * BW + x, q = ((x - d.x) ** 2 + (y - d.y) ** 2) / (r * r);
+        Hh[i] -= depth * Math.exp(-q * 1.6) * (J.bodyF ? J.bodyF[i] : 1);
+      }
+    }
+    return Hh;
+  }
+  function sampleH(Hh, x, y) {
+    x = clamp(x, 0, BW - 1.001); y = clamp(y, 0, BH - 1.001);
+    const ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy, i = iy * BW + ix;
+    return (Hh[i] * (1 - fx) + Hh[i + 1] * fx) * (1 - fy) + (Hh[i + BW] * (1 - fx) + Hh[i + BW + 1] * fx) * fy;
+  }
+
+  function pointsIn(mask, rng, n) {
+    const d = alphaData(mask), pts = [];
+    for (let tries = 0; pts.length < n && tries < n * 60; tries++) {
+      const x = Math.floor(rng() * SW), y = Math.floor(rng() * SH);
+      if (d[(y * SW + x) * 4 + 3] > 100) pts.push([(x + rng()) * (BW / SW), (y + rng()) * (BH / SH)]);
+    }
+    return pts;
+  }
+  function makeRust(mask, amount, rng) {
+    const [c, g] = mk();
+    const cols = ['#6E280B', '#8E3B13', '#A9501B', '#C46A26', '#D9873A', '#58200A'];
+    for (const [x, y] of pointsIn(mask, rng, Math.round(30 + amount * 110))) {
+      const k = 3 + Math.floor(rng() * 5), r0 = 6 + rng() * 18 * (0.6 + amount);
+      for (let i = 0; i < k; i++) {
+        g.fillStyle = cols[Math.floor(rng() * cols.length)];
+        g.globalAlpha = 0.75 + rng() * 0.25;
+        circ(g, x + (rng() - 0.5) * r0 * 1.6, y + (rng() - 0.5) * r0 * 1.6, r0 * (0.4 + rng() * 0.6));
+      }
+    }
+    g.globalAlpha = 1;
+    // Flaky texture
+    for (let i = 0; i < 9000; i++) { g.fillStyle = rng() < 0.5 ? 'rgba(60,18,4,.55)' : 'rgba(240,150,70,.45)'; const s = 0.8 + rng() * 1.8; g.fillRect(rng() * BW, rng() * BH, s, s); }
+    for (let i = 0; i < 260; i++) { g.fillStyle = 'rgba(40,12,2,.6)'; circ(g, rng() * BW, rng() * BH, 0.8 + rng() * 1.6); }
+    // Rust clings to edges too
+    const [e, eg] = mk();
+    px(eg, () => { eg.drawImage(mask, 0, 0); eg.globalCompositeOperation = 'destination-out'; eg.drawImage(mask, 4, 5); eg.drawImage(mask, -4, -3); eg.globalCompositeOperation = 'source-in'; eg.fillStyle = '#7A2E0E'; eg.fillRect(0, 0, e.width, e.height); });
+    px(g, () => { g.globalAlpha = amount; g.drawImage(e, 0, 0); });
+    return intoMask(c, mask);
+  }
+  function makeDirt(mask, amount, rng) {
+    const [c, g] = mk();
+    g.fillStyle = `rgba(86,70,50,${0.35 + amount * 0.4})`; g.fillRect(0, 0, BW, BH);
+    for (let i = 0; i < 90; i++) { g.fillStyle = `rgba(60,46,30,${0.2 + rng() * 0.35})`; circ(g, rng() * BW, rng() * BH, 6 + rng() * 22); }
+    for (let i = 0; i < 40; i++) { g.fillStyle = 'rgba(110,95,70,.35)'; g.fillRect(rng() * BW, rng() * BH, 1.5 + rng() * 2, 10 + rng() * 30); }
+    noise(g, rng, 4000, ['rgba(30,22,12,.4)', 'rgba(150,130,100,.3)'], 1.4);
+    return intoMask(c, mask);
+  }
+  function makeOldPaint(mask, color, rng) {
+    const [c, g] = mk();
+    g.fillStyle = color; g.fillRect(0, 0, BW, BH);
+    g.fillStyle = 'rgba(255,255,255,.28)'; g.fillRect(0, 0, BW, BH);      // sun-faded
+    noise(g, rng, 5000, ['rgba(255,255,255,.12)', 'rgba(0,0,0,.1)'], 1.4);
+    cut(g, () => { for (let i = 0; i < 46; i++) { const x = rng() * BW, y = rng() * BH; poly(g, Array.from({ length: 6 }, (_, k) => { const a = (k / 6) * TAU, r = 2 + rng() * 8; return [x + Math.cos(a) * r, y + Math.sin(a) * r]; })); } });
+    g.strokeStyle = 'rgba(0,0,0,.25)'; g.lineWidth = 0.8;
+    for (let i = 0; i < 30; i++) { const x = rng() * BW, y = rng() * BH; g.beginPath(); g.moveTo(x, y); g.lineTo(x + (rng() - 0.5) * 30, y + (rng() - 0.5) * 10); g.stroke(); }
+    return intoMask(c, mask);
+  }
+  function makeFlat(mask, color, rng) {
+    const [c, g] = mk(); g.fillStyle = color; g.fillRect(0, 0, BW, BH);
+    noise(g, rng, 6000, ['rgba(40,38,34,.35)', 'rgba(200,196,188,.25)'], 1.3);
+    for (let i = 0; i < 120; i++) { g.fillStyle = 'rgba(50,46,40,.45)'; circ(g, rng() * BW, rng() * BH, 0.7 + rng() * 1.4); }
+    return intoMask(c, mask);
+  }
+  function makeGrime(mask, rng) {
+    const [c, g] = mk(); g.fillStyle = '#7F786E'; g.fillRect(0, 0, BW, BH);
+    noise(g, rng, 4000, ['rgba(60,55,48,.35)', 'rgba(170,165,155,.3)'], 1.4);
+    g.strokeStyle = 'rgba(40,36,30,.6)'; g.lineWidth = 0.9;
+    for (let i = 0; i < 40; i++) { let x = rng() * BW, y = rng() * BH; g.beginPath(); g.moveTo(x, y); for (let k = 0; k < 4; k++) { x += (rng() - 0.5) * 14; y += rng() * 12; g.lineTo(x, y); } g.stroke(); }
+    return intoMask(c, mask);
+  }
+  function makePaint(mask, id, rng) {
+    const p = PAINTS.find((x) => x.id === id) || PAINTS[0];
+    const [c, g] = mk();
+    const gr = g.createLinearGradient(0, 60, 0, 270);
+    if (p.metal) { gr.addColorStop(0, p.c[0]); gr.addColorStop(0.35, p.c[1]); gr.addColorStop(0.55, p.c[0]); gr.addColorStop(1, p.c[1]); }
+    else { gr.addColorStop(0, p.c[0]); gr.addColorStop(1, p.c[1]); }
+    g.fillStyle = gr; g.fillRect(0, 0, BW, BH);
+    if (p.galaxy) { for (let i = 0; i < 260; i++) { g.fillStyle = i % 9 ? 'rgba(255,255,255,.8)' : '#FFD5F5'; circ(g, rng() * BW, rng() * BH, 0.4 + rng() * 1.1); } }
+    g.fillStyle = 'rgba(255,255,255,.22)';
+    for (let x = -60; x < BW; x += 140) poly(g, [[x, 0], [x + 26, 0], [x + 96, BH], [x + 70, BH]]);
+    const out = intoMask(c, mask);
+    return out;
+  }
+  function makeOil(mask, iron) {
+    const [c, g] = mk();
+    g.fillStyle = iron ? 'rgba(18,18,20,.9)' : 'rgba(110,48,14,.5)'; g.fillRect(0, 0, BW, BH);
+    const gr = g.createLinearGradient(0, 80, 0, 220); gr.addColorStop(0, 'rgba(255,255,255,.22)'); gr.addColorStop(0.4, 'rgba(255,255,255,0)'); gr.addColorStop(1, 'rgba(255,255,255,.06)');
+    g.fillStyle = gr; g.fillRect(0, 0, BW, BH);
+    return intoMask(c, mask);
+  }
+  function makeShine(mask, rng) {
+    const [c, g] = mk();
+    g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(0, 0, BW, BH);
+    g.fillStyle = 'rgba(255,255,255,.5)';
+    for (let x = -40; x < BW; x += 90) poly(g, [[x, 0], [x + 14, 0], [x + 64, BH], [x + 50, BH]]);
+    for (let i = 0; i < 40; i++) { g.fillStyle = 'rgba(255,255,255,.9)'; circ(g, rng() * BW, rng() * BH, 0.8); }
+    return intoMask(c, mask);
+  }
+
+  // ---------- Compose the item's color texture ----------
+  let composeDirty = true, mapsDirty = true;
+  const BLEED = [];
+  for (const d of [3, 6]) for (let a = 0; a < 8; a++) BLEED.push([Math.round(Math.cos((a / 8) * TAU) * d), Math.round(Math.sin((a / 8) * TAU) * d)]);
+  function compose() {
+    const J = job, g = itemG;
+    px(g, () => { g.clearRect(0, 0, itemCv.width, itemCv.height); g.drawImage(J.base, 0, 0); });
+    const stripStep = J.item.steps.includes('strip');
+    if (J.layers.oldpaint && !stripStep) px(g, () => g.drawImage(J.layers.oldpaint, 0, 0));
+    for (const k of ['paint', 'oil', 'polish']) {
+      if (!J.full[k]) continue;
+      px(tmpG, () => {
+        tmpG.clearRect(0, 0, tmpCv.width, tmpCv.height);
+        tmpG.drawImage(J.full[k], 0, 0);
+        tmpG.globalCompositeOperation = 'destination-in'; tmpG.drawImage(J.reveals[k], 0, 0);
+        tmpG.globalCompositeOperation = 'source-over';
+      });
+      px(g, () => g.drawImage(tmpCv, 0, 0));
+    }
+    J.item.details(g, J);
+    // Worn layers, bottom to top: dull metal, weathered wood, old paint, rust, dirt.
+    for (const k of ['dull', 'grime', stripStep ? 'oldpaint' : null, 'rust', 'dirt']) {
+      if (k && J.layers[k]) px(g, () => g.drawImage(J.layers[k], 0, 0));
+    }
+    if (J.item.edge && J.edgeProgress > 0) {
+      const [, , x1, y1] = J.item.edge;
+      g.strokeStyle = `rgba(255,255,255,${0.95 * J.edgeProgress})`; g.lineWidth = 2;
+      g.beginPath(); g.moveTo(40, 153); g.quadraticCurveTo(80, 172, 140, 174.5); g.lineTo(x1 + 2, y1 + 0.5); g.stroke();
+    }
+    if (J.part) {
+      const P = J.item.part;
+      if (J.part.placed) P.draw(g, P.target[0], P.target[1]);
+      else if (P.drawOld) P.drawOld(g, P.target[0], P.target[1]);
+    }
+    // Screws are real 3D parts; only the empty holes are painted on.
+    for (const s of J.screws) if (s.state !== 'in') { g.fillStyle = '#1D1F22'; circ(g, s.x, s.y, 3.2); }
+    // Bleed edge colors outward so the sides of the 3D shape pick up the right color.
+    px(bleedG, () => { bleedG.clearRect(0, 0, bleedCv.width, bleedCv.height); bleedG.drawImage(itemCv, 0, 0); });
+    px(g, () => { g.globalCompositeOperation = 'destination-over'; for (const [dx, dy] of BLEED) g.drawImage(bleedCv, dx, dy); });
+    itemTex.needsUpdate = true;
+    composeDirty = false;
+    mapsDirty = true;
+  }
+
+  // Roughness, metalness and bump maps follow the restoration: rust is rough and dull, polish is mirror-smooth.
+  function updateMaps() {
+    const J = job, stripStep = J.item.steps.includes('strip');
+    const revealRough = { paint: 0.3, oil: J.masks.wood ? 0.35 : 0.28, polish: 0.08 };
+    const paintMetal = (PAINTS.find((p) => p.id === J.paintId) || {}).metal ? 1 : 0;
+    const revealMetal = { paint: paintMetal, oil: J.masks.wood ? 0 : 0.45, polish: 1 };
+    for (const [g, base, tbl, layerTbl] of [[roughG, J.roughBase, revealRough, LAYER_ROUGH], [metalG, J.metalBase, revealMetal, LAYER_METAL]]) {
+      g.clearRect(0, 0, BW, BH); g.drawImage(base, 0, 0);
+      for (const k of ['paint', 'oil', 'polish']) {
+        if (!J.full[k]) continue;
+        px(sG, () => {
+          sG.clearRect(0, 0, BW, BH);
+          sG.drawImage(J.full[k], 0, 0, BW, BH);
+          sG.globalCompositeOperation = 'destination-in'; sG.drawImage(J.reveals[k], 0, 0, BW, BH);
+          sG.globalCompositeOperation = 'source-in'; sG.fillStyle = gray(tbl[k]); sG.fillRect(0, 0, BW, BH);
+        });
+        g.drawImage(sCv, 0, 0);
+      }
+      for (const k of ['dull', 'grime', stripStep ? 'oldpaint' : null, 'rust', 'dirt']) {
+        if (k && J.layers[k]) g.drawImage(tinted(J.layers[k], layerTbl[k]), 0, 0);
+      }
+    }
+    bumpG.fillStyle = '#808080'; bumpG.fillRect(0, 0, BW, BH);
+    for (const k of ['dull', 'grime', 'rust', 'dirt']) if (J.layers[k]) bumpG.drawImage(J.layers[k], 0, 0, BW, BH);
+    roughTex.needsUpdate = metalTex.needsUpdate = bumpTex.needsUpdate = true;
+    mapsDirty = false;
+  }
+
+  function updateAlpha() {
+    const J = job, P = J.item.part;
+    px(alphaG, () => {
+      alphaG.clearRect(0, 0, alphaCv.width, alphaCv.height);
+      alphaG.drawImage(J.masks.all, 0, 0);
+    });
+    if (P && (J.part.placed || P.drawOld)) { alphaG.fillStyle = '#fff'; P.draw(alphaG, P.target[0], P.target[1]); }
+    // Grow the mask slightly so the steep sides of the shape are kept.
+    px(bleedG, () => { bleedG.clearRect(0, 0, bleedCv.width, bleedCv.height); bleedG.drawImage(alphaCv, 0, 0); });
+    px(alphaG, () => {
+      alphaG.globalCompositeOperation = 'source-over';
+      for (const [dx, dy] of BLEED.slice(0, 8)) alphaG.drawImage(bleedCv, dx, dy);
+      alphaG.globalCompositeOperation = 'source-in'; alphaG.fillStyle = '#fff'; alphaG.fillRect(0, 0, alphaCv.width, alphaCv.height);
+    });
+    alphaTex.needsUpdate = true;
+  }
+
+  // ---------- Tools (drawn on the canvas; also used for the icons) ----------
+  function drawTool(g, tool, x, y, s = 1, extra = {}) {
+    g.save(); g.translate(x, y); g.scale(s, s);
+    g.lineJoin = 'round'; g.lineCap = 'round';
+    if (tool === 'sponge') {
+      g.fillStyle = '#FFD84D'; rr(g, -18, -10, 36, 22, 6);
+      g.fillStyle = '#3FA35B'; rr(g, -18, -14, 36, 8, 4);
+      g.fillStyle = 'rgba(180,130,0,.5)'; for (const [a, b] of [[-10, 2], [0, 6], [9, 1], [-4, -2], [12, 7]]) circ(g, a, b, 1.6);
+    } else if (tool === 'brush') {
+      g.fillStyle = '#B9804B'; rr(g, -22, -16, 44, 12, 5);
+      g.fillStyle = '#8A5A32'; rr(g, 6, -26, 24, 10, 4);
+      g.strokeStyle = '#B9C1C9'; g.lineWidth = 1.4; for (let i = -18; i <= 18; i += 4) { g.beginPath(); g.moveTo(i, -4); g.lineTo(i + 1, 6); g.stroke(); }
+    } else if (tool === 'sandpaper') {
+      g.fillStyle = '#5D6B78'; rr(g, -18, -18, 36, 14, 4);
+      g.fillStyle = '#C9A46E'; rr(g, -20, -6, 40, 10, 2);
+      g.fillStyle = 'rgba(90,60,20,.5)'; for (let i = 0; i < 14; i++) circ(g, -17 + (i * 37) % 35, -3 + (i * 7) % 6, 0.8);
+    } else if (tool === 'scraper') {
+      g.fillStyle = '#E2483B'; rr(g, -6, -34, 12, 24, 4);
+      g.fillStyle = '#C5CCD3'; poly(g, [[-12, -12], [12, -12], [16, 4], [-16, 4]]);
+      g.strokeStyle = '#FFFFFF'; g.lineWidth = 1; g.beginPath(); g.moveTo(-15, 3); g.lineTo(15, 3); g.stroke();
+    } else if (tool === 'spray') {
+      g.fillStyle = extra.color || '#E2483B'; rr(g, -10, -26, 20, 38, 5);
+      g.fillStyle = '#E8ECEF'; rr(g, -7, -33, 14, 8, 3);
+      g.fillStyle = '#2B2B30'; rr(g, -3, -37, 9, 5, 2);
+      g.fillStyle = 'rgba(255,255,255,.35)'; rr(g, -7, -22, 4, 28, 2);
+    } else if (tool === 'cloth') {
+      g.fillStyle = '#7FB8E6'; g.beginPath(); g.moveTo(-20, 4); g.quadraticCurveTo(-24, -14, -6, -18); g.quadraticCurveTo(10, -24, 20, -10); g.quadraticCurveTo(26, 6, 8, 8); g.closePath(); g.fill();
+      g.strokeStyle = 'rgba(30,70,110,.45)'; g.lineWidth = 1.4; g.beginPath(); g.moveTo(-12, -6); g.quadraticCurveTo(0, -12, 12, -4); g.stroke();
+    } else if (tool === 'oil') {
+      g.fillStyle = '#8A5A32'; rr(g, -3, -34, 6, 22, 3);
+      g.fillStyle = '#C5CCD3'; rr(g, -5, -14, 10, 6, 1);
+      g.fillStyle = '#E3A33B'; poly(g, [[-6, -8], [6, -8], [3, 6], [-3, 6]]);
+    } else if (tool === 'screwdriver') {
+      g.fillStyle = '#FFB000'; rr(g, -6, -38, 12, 22, 5);
+      g.fillStyle = '#C5CCD3'; g.fillRect(-1.6, -16, 3.2, 16);
+    } else if (tool === 'hammer') {
+      g.rotate(extra.swing || 0);
+      g.fillStyle = '#B9804B'; rr(g, -3, -36, 6, 34, 3);
+      g.fillStyle = '#8D97A2'; rr(g, -14, -42, 28, 10, 3);
+    } else if (tool === 'stone') {
+      g.fillStyle = '#5B7C99'; rr(g, -22, -10, 44, 14, 3);
+      g.fillStyle = '#C46A26'; rr(g, -22, 2, 44, 6, 2);
+    } else if (tool === 'hand') {
+      g.fillStyle = '#F3C9A4'; rr(g, -10, -14, 20, 24, 8); rr(g, -4, -28, 8, 18, 4);
+    } else if (tool === 'tub') {
+      g.fillStyle = '#9FB4BF'; poly(g, [[-22, -10], [22, -10], [16, 14], [-16, 14]]);
+      g.fillStyle = '#E8D58A'; poly(g, [[-19, -5], [19, -5], [15, 11], [-15, 11]]);
+      g.fillStyle = 'rgba(255,255,255,.7)'; circ(g, -6, 0, 2); circ(g, 4, 4, 1.6); circ(g, 9, -1, 1.2);
+    }
+    g.restore();
+  }
+  const toolIcons = {};
+  function toolIcon(tool) {
+    if (toolIcons[tool]) return toolIcons[tool];
+    const c = document.createElement('canvas'); c.width = c.height = 96;
+    const g = c.getContext('2d');
+    drawTool(g, tool, 48, 64, 1.55);
+    return (toolIcons[tool] = c.toDataURL());
+  }
+
+  // ---------- Sound ----------
+  let ac = null, noiseBuf = null, scrub = null;
+  function ensureAudio() {
+    try {
+      if (!ac) {
+        ac = new (window.AudioContext || window.webkitAudioContext)();
+        noiseBuf = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
+        const d = noiseBuf.getChannelData(0);
+        for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+        const src = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
+        src.buffer = noiseBuf; src.loop = true; f.type = 'bandpass'; f.Q.value = 0.8; g.gain.value = 0;
+        src.connect(f).connect(g).connect(ac.destination); src.start();
+        scrub = { f, g };
+      }
+      if (ac.state === 'suspended') ac.resume();
+    } catch { ac = null; }
+  }
+  const TOOL_SOUND = { sponge: [700, 0.07], brush: [3800, 0.13], sandpaper: [2200, 0.12], scraper: [1600, 0.11], spray: [6000, 0.08], cloth: [1300, 0.06], oil: [500, 0.06], stone: [5200, 0.1], tub: [900, 0.06] };
+  function setScrub(tool, level) {
+    if (!scrub) return;
+    const [f, v] = TOOL_SOUND[tool] || [1000, 0];
+    scrub.f.frequency.setTargetAtTime(f, ac.currentTime, 0.03);
+    scrub.g.gain.setTargetAtTime(save.muted ? 0 : v * level, ac.currentTime, 0.05);
+  }
+  function burst(vol, freq, dur = 0.03, when = 0, type = 'highpass') {
+    if (save.muted || !ac) return;
+    const t0 = ac.currentTime + when, s = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
+    s.buffer = noiseBuf; f.type = type; f.frequency.value = freq;
+    g.gain.setValueAtTime(vol, t0); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    s.connect(f).connect(g).connect(ac.destination); s.start(t0, Math.random() * 0.8, dur + 0.01);
+  }
+  function tone(freq, dur, vol, when = 0, type = 'triangle') {
+    if (save.muted || !ac) return;
+    const t0 = ac.currentTime + when, o = ac.createOscillator(), g = ac.createGain();
+    o.type = type; o.frequency.value = freq;
+    g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(vol, t0 + 0.008); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g).connect(ac.destination); o.start(t0); o.stop(t0 + dur + 0.02);
+  }
+  const sfx = {
+    step() { [0, 4, 7].forEach((s, i) => tone(660 * Math.pow(2, s / 12), 0.16, 0.07, i * 0.06)); },
+    clank() { tone(320, 0.18, 0.12, 0, 'square'); burst(0.25, 2500, 0.08); tone(1250, 0.4, 0.04, 0.02, 'sine'); },
+    ding() { tone(1568, 0.5, 0.08, 0, 'sine'); tone(2350, 0.4, 0.04, 0.02, 'sine'); },
+    ratchet() { for (let i = 0; i < 5; i++) burst(0.12, 3000, 0.015, i * 0.045); },
+    snap() { burst(0.2, 1500, 0.05); tone(880, 0.12, 0.08, 0.02); },
+    glass() { for (let i = 0; i < 8; i++) burst(0.15, 5000 + Math.random() * 3000, 0.04, i * 0.03); },
+    bubble() { tone(500 + Math.random() * 600, 0.06, 0.03, 0, 'sine'); },
+    win() { [0, 4, 7, 12, 16].forEach((s, i) => tone(523 * Math.pow(2, s / 12), 0.25, 0.08, i * 0.08)); },
+  };
+  const buzz = (ms) => { try { navigator.vibrate?.(ms); } catch { /* not allowed */ } };
+
+  // ---------- 3D scene ----------
+  const glCv = $('gl');
+  const renderer = new THREE.WebGLRenderer({ canvas: glCv, antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setClearColor(0x000000, 0);
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 100);
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x29453c, 0.32));
+  const keyLight = new THREE.DirectionalLight(0xfff4e6, 0.62);
+  keyLight.position.set(-2.4, 6, 3.2);
+  keyLight.castShadow = true;
+  keyLight.shadow.mapSize.set(1024, 1024);
+  Object.assign(keyLight.shadow.camera, { left: -3.4, right: 3.4, top: 2.8, bottom: -2.8, near: 1, far: 14 });
+  keyLight.shadow.bias = -0.0006;
+  scene.add(keyLight);
+  const fillLight = new THREE.DirectionalLight(0xbfe3ff, 0.16);
+  fillLight.position.set(3, 3, -2);
+  scene.add(fillLight);
+  const lanternGlow = new THREE.PointLight(0xffb14a, 0, 2.5);
+  scene.add(lanternGlow);
+
+  // A soft studio environment for metal reflections.
+  const envMap = (() => {
+    const c = document.createElement('canvas'); c.width = 8; c.height = 256;
+    const g = c.getContext('2d'), gr = g.createLinearGradient(0, 0, 0, 256);
+    gr.addColorStop(0, '#FFF7EC'); gr.addColorStop(0.45, '#9DBAC2'); gr.addColorStop(0.55, '#3E6670'); gr.addColorStop(1, '#16302A');
+    g.fillStyle = gr; g.fillRect(0, 0, 8, 256);
+    const es = new THREE.Scene();
+    es.add(new THREE.Mesh(new THREE.SphereGeometry(10, 32, 16), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), side: THREE.BackSide })));
+    const top = new THREE.Mesh(new THREE.PlaneGeometry(7, 3), new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide }));
+    top.position.set(-2, 8, 3); top.rotation.x = Math.PI / 2; es.add(top);
+    const side = new THREE.Mesh(new THREE.PlaneGeometry(3, 5), new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide }));
+    side.position.set(9, 3, 0); side.rotation.y = Math.PI / 2; es.add(side);
+    return new THREE.PMREMGenerator(renderer).fromScene(es, 0.02).texture;
+  })();
+
+  // Green self-healing cutting mat, 60 × 45 cm with 1 cm grid (1 world unit = 5 cm).
+  const matMesh = (() => {
+    const c = document.createElement('canvas'); c.width = 1200; c.height = 900;
+    const g = c.getContext('2d');
+    g.fillStyle = '#2F6E57'; g.beginPath(); g.roundRect(4, 4, 1192, 892, 36); g.fill();
+    g.save(); g.beginPath(); g.roundRect(4, 4, 1192, 892, 36); g.clip();
+    for (let i = 0, x = 0; x <= 1200; i++, x += 20) { g.fillStyle = i % 5 ? 'rgba(255,255,255,.08)' : 'rgba(255,255,255,.2)'; g.fillRect(x - 0.75, 0, 1.5, 900); }
+    for (let i = 0, y = 0; y <= 900; i++, y += 20) { g.fillStyle = i % 5 ? 'rgba(255,255,255,.08)' : 'rgba(255,255,255,.2)'; g.fillRect(0, y - 0.75, 1200, 1.5); }
+    g.fillStyle = 'rgba(255,255,255,.55)'; g.font = '700 15px Manrope, sans-serif'; g.textAlign = 'center';
+    for (let i = 0, x = 0; x <= 1200; i++, x += 20) { g.fillRect(x - 1, 4, 2, i % 5 ? 10 : 18); if (i % 5 === 0 && i) g.fillText(String(i), x, 38); }
+    g.textAlign = 'left';
+    for (let i = 0, y = 0; y <= 900; i++, y += 20) { g.fillRect(4, y - 1, i % 5 ? 10 : 18, 2); if (i % 5 === 0 && i) g.fillText(String(i), 26, y + 5); }
+    g.restore();
+    const tex = new THREE.CanvasTexture(c); tex.anisotropy = 8;
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(12, 9).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95, metalness: 0, alphaTest: 0.5 }));
+    m.position.y = -0.003; m.receiveShadow = true;
+    scene.add(m);
+    return m;
+  })();
+
+  // The item: a finely divided sheet raised by the height field and painted with the composed texture.
+  const SX = 280, SY = 210, HS = 0.16;
+  const itemGeo = new THREE.PlaneGeometry(4, 3, SX, SY).rotateX(-Math.PI / 2);
+  const posAttr = itemGeo.attributes.position;
+  const itemTex = new THREE.CanvasTexture(itemCv);
+  itemTex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+  const [roughCv, roughG] = mk(BW, BH), [metalCv, metalG] = mk(BW, BH), [bumpCv, bumpG] = mk(BW, BH), [alphaCv, alphaG] = mk();
+  const roughTex = new THREE.CanvasTexture(roughCv), metalTex = new THREE.CanvasTexture(metalCv), bumpTex = new THREE.CanvasTexture(bumpCv), alphaTex = new THREE.CanvasTexture(alphaCv);
+  const itemMat = new THREE.MeshStandardMaterial({
+    map: itemTex, roughnessMap: roughTex, metalnessMap: metalTex, bumpMap: bumpTex, bumpScale: 0.02,
+    alphaMap: alphaTex, alphaTest: 0.5, envMap, envMapIntensity: 0.7, roughness: 1, metalness: 1,
+  });
+  const itemMesh = new THREE.Mesh(itemGeo, itemMat);
+  itemMesh.castShadow = itemMesh.receiveShadow = true;
+  itemMesh.customDepthMaterial = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, alphaMap: alphaTex, alphaTest: 0.5 });
+  scene.add(itemMesh);
+
+  function applyHeights() {
+    const J = job;
+    J.H = heightsNow(J);
+    for (let j = 0; j <= SY; j++) for (let i = 0; i <= SX; i++) {
+      posAttr.setY(j * (SX + 1) + i, sampleH(J.H, (i / SX) * (BW - 1), (j / SY) * (BH - 1)) * HS);
+    }
+    posAttr.needsUpdate = true;
+    itemGeo.computeVertexNormals();
+    itemGeo.computeBoundingSphere();
+  }
+
+  // Vinegar bath for the soak step
+  const tub = new THREE.Mesh(new THREE.BoxGeometry(4.4, 1, 3.4).translate(0, 0.5, 0), new THREE.MeshStandardMaterial({ color: 0xE8D58A, transparent: true, opacity: 0.42, roughness: 0.05, metalness: 0, envMap, depthWrite: false }));
+  tub.visible = false;
+  scene.add(tub);
+
+  // Screws
+  const screwGeo = new THREE.CylinderGeometry(0.075, 0.068, 0.04, 24);
+  const slotGeo = new THREE.BoxGeometry(0.12, 0.02, 0.018);
+  const slotMat = new THREE.MeshBasicMaterial({ color: 0x151515, transparent: true });
+  const screwMeshes = [];
+  function screwMaterial(rusty) {
+    return new THREE.MeshStandardMaterial(rusty
+      ? { color: 0x8E3B13, roughness: 0.9, metalness: 0.25, envMap, transparent: true }
+      : { color: 0xDDE3E8, roughness: 0.2, metalness: 1, envMap, transparent: true });
+  }
+  function buildScrews() {
+    screwMeshes.forEach((m) => { scene.remove(m); m.userData.head.material.dispose(); });
+    screwMeshes.length = 0;
+    for (const s of job.screws) {
+      const g = new THREE.Group(), head = new THREE.Mesh(screwGeo, screwMaterial(s.rusty));
+      head.castShadow = true;
+      const a = new THREE.Mesh(slotGeo, slotMat), b = new THREE.Mesh(slotGeo, slotMat);
+      a.position.y = b.position.y = 0.021; b.rotation.y = Math.PI / 2;
+      g.add(head, a, b);
+      g.userData = { head, s, baseY: sampleH(job.H, s.x, s.y) * HS + 0.02 };
+      g.position.set(s.x / 100 - 2, g.userData.baseY, s.y / 100 - 1.5);
+      scene.add(g);
+      screwMeshes.push(g);
+    }
+  }
+
+  // Loose parts (new wheel, new glass) and the old part falling away
+  let partMesh = null, oldPartMesh = null;
+  const PART_REST_Y = 0.03, PART_LIFT_Y = 0.5;
+  function makePartMesh(drawFn, size, glass) {
+    const [w, h] = size, c = document.createElement('canvas'); c.width = w * R; c.height = h * R;
+    const g = c.getContext('2d'); g.setTransform(R, 0, 0, R, 0, 0); drawFn(g, w / 2, h / 2);
+    const tex = new THREE.CanvasTexture(c);
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w / 100, h / 100).rotateX(-Math.PI / 2),
+      new THREE.MeshStandardMaterial({ map: tex, alphaTest: glass ? 0.05 : 0.5, transparent: !!glass, depthWrite: !glass, roughness: glass ? 0.05 : 0.45, metalness: glass ? 0 : 0.3, envMap }));
+    m.castShadow = true;
+    m.customDepthMaterial = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: tex, alphaTest: 0.5 });
+    scene.add(m);
+    return m;
+  }
+  function disposeMesh(m) { if (!m) return; scene.remove(m); m.geometry.dispose(); m.material.map?.dispose(); m.material.dispose(); }
+
+  function setup3D() {
+    const J = job;
+    applyHeights();
+    updateAlpha();
+    compose();
+    updateMaps();
+    buildScrews();
+    disposeMesh(partMesh); partMesh = null;
+    disposeMesh(oldPartMesh); oldPartMesh = null;
+    if (J.part) {
+      partMesh = makePartMesh(J.item.part.draw, J.cfg.partSize, J.cfg.glassPart);
+      partMesh.position.set(J.part.x / 100 - 2, PART_REST_Y, J.part.y / 100 - 1.5);
+    }
+    lanternGlow.intensity = 0;
+    tub.visible = false;
+  }
+
+  // ---------- Camera & layout ----------
+  const ov = $('cv'), ctx = ov.getContext('2d');
+  let W = 1, H = 1, dpr = 1, camDist = 14, freeTop = 110, availH = 400;
+  const cam = { az: 0, el: 0.98, sway: 0, showT: -1 };
+  const camTarget = new THREE.Vector3(0, 0.05, 0.05);
+  function layout() {
+    W = window.innerWidth || 1; H = window.innerHeight || 1;
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    renderer.setSize(W, H, false);
+    ov.width = Math.round(W * dpr); ov.height = Math.round(H * dpr);
+    freeTop = (document.querySelector('.top').getBoundingClientRect().bottom || 110) + 6;
+    const bottom = H - (document.querySelector('.tray-card').getBoundingClientRect().top || H - 150) + 6;
+    availH = Math.max(120, H - freeTop - bottom);
+    camera.aspect = W / H;
+    const t = Math.tan((camera.fov * Math.PI) / 360);
+    const dW = (4.5 / (2 * t * camera.aspect)) * (W / Math.max(100, W - 20));
+    const dH = ((3 * Math.sin(cam.el) + 0.6) / (2 * t)) * (H / availH);
+    camDist = Math.max(dW, dH);
+    camera.setViewOffset(W, H, 0, -(freeTop + availH / 2 - H / 2), W, H);
+    camera.updateProjectionMatrix();
+  }
+  function placeCamera() {
+    camera.position.set(
+      camTarget.x + camDist * Math.sin(cam.az) * Math.cos(cam.el),
+      camTarget.y + camDist * Math.sin(cam.el),
+      camTarget.z + camDist * Math.cos(cam.az) * Math.cos(cam.el));
+    camera.lookAt(camTarget);
+  }
+
+  // ---------- Picking (screen → spot on the item) ----------
+  const raycaster = new THREE.Raycaster(), ndc = new THREE.Vector2();
+  function rayAt(cx, cy) { ndc.set((cx / W) * 2 - 1, -(cy / H) * 2 + 1); raycaster.setFromCamera(ndc, camera); return raycaster.ray; }
+  function hAtWorld(x, z) {
+    const dx = (x + 2) * 100, dy = (z + 1.5) * 100;
+    if (!job || dx < 0 || dy < 0 || dx > BW - 1 || dy > BH - 1) return 0;
+    return sampleH(job.H, dx, dy) * HS;
+  }
+  // March the ray down through the height field to find the surface under the finger.
+  function pickSurface(cx, cy) {
+    const { origin: o, direction: d } = rayAt(cx, cy);
+    if (d.y > -1e-4) return null;
+    const tA = (2.2 * HS - o.y) / d.y, tB = -o.y / d.y, N = 90;
+    let prev = tA;
+    for (let k = 1; k <= N; k++) {
+      const t = tA + ((tB - tA) * k) / N;
+      if (o.y + d.y * t <= hAtWorld(o.x + d.x * t, o.z + d.z * t)) {
+        let lo = prev, hi = t;
+        for (let it = 0; it < 7; it++) { const mid = (lo + hi) / 2; if (o.y + d.y * mid <= hAtWorld(o.x + d.x * mid, o.z + d.z * mid)) hi = mid; else lo = mid; }
+        const p = new THREE.Vector3(o.x + d.x * hi, o.y + d.y * hi, o.z + d.z * hi);
+        return { x: (p.x + 2) * 100, y: (p.z + 1.5) * 100, p };
+      }
+      prev = t;
+    }
+    const p = new THREE.Vector3(o.x + d.x * tB, 0, o.z + d.z * tB);
+    return { x: (p.x + 2) * 100, y: (p.z + 1.5) * 100, p };
+  }
+  function pickPlane(cx, cy, y) {
+    const { origin: o, direction: d } = rayAt(cx, cy);
+    const t = (y - o.y) / d.y, p = new THREE.Vector3(o.x + d.x * t, y, o.z + d.z * t);
+    return { x: (p.x + 2) * 100, y: (p.z + 1.5) * 100, p };
+  }
+  const designToWorld = (x, y, lift = 0) => new THREE.Vector3(x / 100 - 2, (job && job.H ? sampleH(job.H, x, y) : 0) * HS + lift, y / 100 - 1.5);
+  const _v = new THREE.Vector3();
+  function toScreen(v) { _v.copy(v).project(camera); return [((_v.x + 1) / 2) * W, ((1 - _v.y) / 2) * H]; }
+
+  // ---------- Particles (world space, drawn on the overlay) ----------
+  const parts = [];
+  function emit(type, x, y, n = 1, color) {
+    const b = designToWorld(x, y, 0.01);
+    for (let i = 0; i < n; i++) {
+      if (parts.length > 400) parts.shift();
+      const r = (s) => (Math.random() - 0.5) * s;
+      const p = { type, x: b.x, y: b.y, z: b.z, vx: r(0.6), vy: Math.random() * 0.3, vz: r(0.6), life: 0, max: 0.6 + Math.random() * 0.5, size: 1.5 + Math.random() * 2.5, color };
+      if (type === 'flake' || type === 'chip') { p.vx = r(1.4); p.vz = r(1.2) + 0.3; p.vy = 0.8 + Math.random() * 1.2; p.size = 1.5 + Math.random() * 3; p.max = 1 + Math.random() * 0.6; }
+      if (type === 'flake') p.color = ['#8E3B13', '#C46A26', '#6E280B', '#D9873A'][i % 4];
+      if (type === 'bubble') { p.vy = 0.25 + Math.random() * 0.4; p.vx = r(0.15); p.vz = r(0.15); p.size = 2 + Math.random() * 4; p.max = 0.9 + Math.random() * 0.6; }
+      if (type === 'spark') { p.vx = r(5); p.vz = r(5); p.vy = 1 + Math.random() * 2.5; p.max = 0.3 + Math.random() * 0.25; p.size = 1.2; }
+      if (type === 'dust') { p.vy = 0.1 + Math.random() * 0.35; p.size = 3 + Math.random() * 4; p.color = color || 'rgba(220,205,180,.6)'; }
+      if (type === 'mist') { p.vx = r(0.8); p.vz = r(0.8); p.vy = 0.15; p.size = 1.5 + Math.random() * 2; }
+      if (type === 'glint') { p.vx = p.vy = p.vz = 0; p.y += 0.05; p.size = 5 + Math.random() * 6; p.max = 0.5; }
+      parts.push(p);
+    }
+  }
+  function updateParts(dt) {
+    for (let i = parts.length - 1; i >= 0; i--) {
+      const p = parts[i];
+      p.life += dt;
+      const g = { flake: -9, chip: -9, spark: -12, dust: -0.2 }[p.type] || 0;
+      p.vy += g * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt;
+      if ((p.type === 'flake' || p.type === 'chip') && p.y < hAtWorld(p.x, p.z)) { p.y = hAtWorld(p.x, p.z); p.vx = p.vy = p.vz = 0; }
+      if (p.life > p.max) parts.splice(i, 1);
+    }
+  }
+  function drawParts() {
+    const v = new THREE.Vector3();
+    for (const p of parts) {
+      v.set(p.x, p.y, p.z);
+      const [x, y] = toScreen(v), a = 1 - p.life / p.max, s = p.size * 1.2;
+      ctx.globalAlpha = Math.max(0, a);
+      if (p.type === 'bubble') { ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y, s, 0, TAU); ctx.stroke(); }
+      else if (p.type === 'glint') { ctx.fillStyle = '#FFFFFF'; ctx.beginPath(); ctx.moveTo(x, y - s); ctx.lineTo(x + s * 0.2, y - s * 0.2); ctx.lineTo(x + s, y); ctx.lineTo(x + s * 0.2, y + s * 0.2); ctx.lineTo(x, y + s); ctx.lineTo(x - s * 0.2, y + s * 0.2); ctx.lineTo(x - s, y); ctx.lineTo(x - s * 0.2, y - s * 0.2); ctx.fill(); }
+      else if (p.type === 'spark') { ctx.strokeStyle = '#FFD27A'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - p.vx * 2, y + p.vy * 2); ctx.stroke(); }
+      else { ctx.fillStyle = p.color || '#fff'; ctx.fillRect(x - s / 2, y - s / 2, s, s); }
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // ---------- Before / after shots (cropped 3D renders) ----------
+  let pendingCapture = null;
+  function captureItem() {
+    let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+    for (const x of [-2, 2]) for (const z of [-1.5, 1.5]) for (const y of [0, 0.3]) {
+      const [sx, sy] = toScreen(new THREE.Vector3(x, y, z));
+      x0 = Math.min(x0, sx); y0 = Math.min(y0, sy); x1 = Math.max(x1, sx); y1 = Math.max(y1, sy);
+    }
+    const padX = (x1 - x0) * 0.02, padY = (y1 - y0) * 0.04;
+    x0 = clamp(x0 - padX, 0, W); x1 = clamp(x1 + padX, 0, W); y0 = clamp(y0 - padY, 0, H); y1 = clamp(y1 + padY, 0, H);
+    const pr = renderer.getPixelRatio(), c = document.createElement('canvas');
+    c.width = Math.max(2, Math.round((x1 - x0) * pr)); c.height = Math.max(2, Math.round((y1 - y0) * pr));
+    c.getContext('2d').drawImage(glCv, x0 * pr, y0 * pr, c.width, c.height, 0, 0, c.width, c.height);
+    return c;
+  }
+
+  // ---------- Steps ----------
+  const step = () => STEPS[job.item.steps[job.stepIdx]];
+  let stepProgress = 0, advancing = false;
+
+  function startJob(n) {
+    job = buildJob(n);
+    setup3D();
+    stepProgress = 0; advancing = false;
+    cam.sway = 0; cam.showT = -1;
+    pendingCapture = 'before';
+    parts.length = 0;
+    $('jobLabel').textContent = `Job ${n}${job.cycle ? ' · Heavier rust' : ''}`;
+    $('itemName').textContent = job.item.name;
+    $('steps').innerHTML = job.item.steps.map((s) => `<img src="${toolIcon(STEPS[s].tool)}" alt="${STEPS[s].label}">`).join('');
+    $('done').hidden = true;
+    enterStep();
+  }
+
+  function enterStep() {
+    const s = step();
+    [...$('steps').children].forEach((el, i) => { el.classList.toggle('done', i < job.stepIdx); el.classList.toggle('now', i === job.stepIdx); });
+    $('toolIcon').src = toolIcon(s.tool);
+    $('stepLabel').textContent = s.label;
+    stepProgress = 0; setBar(0);
+    $('swatches').hidden = s.layer !== 'paint';
+    if (s.layer === 'paint') renderSwatches();
+    if (s.type === 'screws' && !s.out) { job.screws.forEach((sc) => { sc.rusty = false; }); buildScrews(); }
+    layout();
+  }
+  function setBar(p) { $('barFill').style.transform = `scaleX(${clamp(p, 0, 1)})`; }
+
+  function completeStep() {
+    if (advancing) return;
+    advancing = true;
+    setBar(1);
+    sfx.step(); buzz(15);
+    toast(['Nice!', 'Clean!', 'Looking good!', 'So satisfying!'][job.stepIdx % 4]);
+    setTimeout(() => {
+      advancing = false;
+      job.stepIdx++;
+      if (job.stepIdx >= job.item.steps.length) finishJob();
+      else enterStep();
+    }, 650);
+  }
+
+  function finishJob() {
+    job.finished = true;
+    compose(); updateMaps();
+    if (job.cfg.light) { lanternGlow.position.copy(designToWorld(job.cfg.light[0], job.cfg.light[1], 0.35)); lanternGlow.intensity = 1.4; }
+    const reward = 25 + Math.min(job.n, 20) * 5;
+    save.coins += reward; save.level = job.n + 1; persist();
+    $('coins').textContent = save.coins.toLocaleString();
+    sfx.win();
+    [...$('steps').children].forEach((el) => { el.classList.add('done'); el.classList.remove('now'); });
+    cam.sway = 0;
+    pendingCapture = 'after';
+    job.reward = reward;
+  }
+  function afterCaptured(after) {
+    cam.showT = 0;
+    for (let i = 0; i < 24; i++) setTimeout(() => emit('glint', 40 + Math.random() * 320, 60 + Math.random() * 180, 1), i * 40);
+    setTimeout(() => {
+      $('doneLabel').textContent = `Job ${job.n} done`;
+      $('doneTitle').textContent = `${job.item.name.replace(/^(Rusty|Old) /, '')} restored`;
+      $('doneCoins').textContent = `+${job.reward}`;
+      const cmp = $('compare');
+      cmp.querySelectorAll('canvas').forEach((c) => c.remove());
+      cmp.style.aspectRatio = `${after.width} / ${after.height}`;
+      after.style.zIndex = 0; job.before.style.zIndex = 1;
+      cmp.prepend(after, job.before);
+      setCompare(50);
+      $('done').hidden = false;
+    }, 1600);
+  }
+  function setCompare(pct) {
+    pct = clamp(pct, 0, 100);
+    job.before.style.clipPath = `inset(0 ${100 - pct}% 0 0)`;
+    $('handle').style.left = `${pct}%`;
+  }
+  let compareDrag = false;
+  $('compare').addEventListener('pointerdown', (e) => { compareDrag = true; $('compare').setPointerCapture(e.pointerId); moveCompare(e); });
+  $('compare').addEventListener('pointermove', (e) => { if (compareDrag) moveCompare(e); });
+  $('compare').addEventListener('pointerup', () => { compareDrag = false; });
+  function moveCompare(e) { const r = $('compare').getBoundingClientRect(); setCompare(((e.clientX - r.left) / r.width) * 100); }
+
+  function toast(text) { const t = $('toast'); t.textContent = text; t.classList.remove('show'); void t.offsetWidth; t.classList.add('show'); }
+
+  // Rubbing
+  const TOOL_PARTICLE = { sponge: 'bubble', brush: 'flake', sandpaper: 'dust', scraper: 'chip', spray: 'mist', cloth: 'glint', oil: 'dust' };
+  const RADIUS = { sponge: 24, brush: 18, sandpaper: 20, scraper: 18, spray: 26, cloth: 24, oil: 22 };
+  function stamp(x, y) {
+    const s = step(), J = job, rad = RADIUS[s.tool] || 20;
+    if (s.reveal) {
+      const g = J.reveals[s.layer].getContext('2d');
+      const gr = g.createRadialGradient(x, y, 0, x, y, rad);
+      gr.addColorStop(0, `rgba(255,255,255,${s.strength})`); gr.addColorStop(1, 'rgba(255,255,255,0)');
+      g.fillStyle = gr; circ(g, x, y, rad);
+    } else {
+      const g = J.layers[s.layer].getContext('2d');
+      const strength = s.strength * (s.layer === 'rust' && J.soaked ? 1.8 : 1);
+      g.save(); g.globalCompositeOperation = 'destination-out';
+      const gr = g.createRadialGradient(x, y, 0, x, y, rad);
+      gr.addColorStop(0, `rgba(0,0,0,${strength})`); gr.addColorStop(0.7, `rgba(0,0,0,${strength * 0.6})`); gr.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = gr; circ(g, x, y, rad);
+      g.restore();
+    }
+    composeDirty = true;
+    const onItem = sampleAt(s.reveal ? null : J.samples[s.layer], x, y);
+    if (onItem && Math.random() < 0.55) {
+      const type = TOOL_PARTICLE[s.tool];
+      let color;
+      if (s.tool === 'spray') color = (PAINTS.find((p) => p.id === J.paintId) || PAINTS[0]).c[0];
+      if (s.tool === 'scraper') color = J.item.body;
+      if (s.tool === 'oil') color = 'rgba(227,163,59,.7)';
+      emit(type, x + (Math.random() - 0.5) * rad, y + (Math.random() - 0.5) * rad, s.tool === 'brush' ? 2 : 1, color);
+      if (s.tool === 'brush' && Math.random() < 0.15) emit('spark', x, y, 2);
+      if (s.tool === 'sponge' && Math.random() < 0.08) sfx.bubble();
+    }
+  }
+  const allMaskData = () => (job._all || (job._all = alphaData(job.masks.all)));
+  function sampleAt(data, x, y) {
+    const d = data || allMaskData();
+    const i = clamp(Math.floor((x / BW) * SW), 0, SW - 1), j = clamp(Math.floor((y / BH) * SH), 0, SH - 1);
+    return d[(j * SW + i) * 4 + 3] > 20;
+  }
+
+  let lastCheck = 0;
+  function checkProgress() {
+    const s = step(), J = job;
+    if (s.reveal) {
+      const d = alphaData(J.reveals[s.layer]), m = J.regionCount[s.layer].mask;
+      let tot = 0, got = 0;
+      for (let i = 3; i < d.length; i += 4) if (m[i] > 128) { tot++; if (d[i] > 150) got++; }
+      stepProgress = tot ? got / tot : 1;
+      if (stepProgress > 0.93) {
+        const g = J.reveals[s.layer].getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, BW, BH);
+        composeDirty = true; completeStep();
+      }
+    } else {
+      J.samples[s.layer] = alphaData(J.layers[s.layer]);
+      let n = 0; const d = J.samples[s.layer];
+      for (let i = 3; i < d.length; i += 4) if (d[i] > 14) n++;
+      stepProgress = 1 - n / J.initial[s.layer];
+      if (n / J.initial[s.layer] < 0.06) {
+        const g = J.layers[s.layer].getContext('2d'); px(g, () => g.clearRect(0, 0, 9999, 9999));
+        composeDirty = true; completeStep();
+      }
+    }
+    setBar(stepProgress / 0.94);
+  }
+
+  // ---------- Input ----------
+  let pointer = null;   // { x, y, p } spot on the item while pressing
+  let hover = null, holding = false, dragPart = null, hammerAnim = null, scrubLevel = 0;
+  const TOUCH_LIFT = 46;
+  const liftedPick = (e) => pickSurface(e.clientX, e.clientY - (e.pointerType === 'touch' ? TOUCH_LIFT : 0));
+  window.addEventListener('pointerdown', (e) => {
+    if (e.button > 0 || (e.target.closest && e.target.closest('button, .sheet, .tray-card'))) return;
+    ensureAudio();
+    if (!job || job.finished || advancing) return;
+    const s = step();
+    if (s.type === 'rub' || s.type === 'sharpen') {
+      const pt = liftedPick(e);
+      if (!pt) return;
+      pointer = pt;
+      if (s.type === 'rub') stamp(pt.x, pt.y);
+    } else if (s.type === 'soak') holding = true;
+    else if (s.type === 'screws') { const pt = pickSurface(e.clientX, e.clientY); if (pt) tapScrew(pt.x, pt.y, s.out); }
+    else if (s.type === 'dents') { const pt = pickSurface(e.clientX, e.clientY); hammerAnim = { sx: e.clientX, sy: e.clientY, t: 0 }; if (pt) tapDent(pt.x, pt.y); }
+    else if (s.type === 'part') {
+      const pt = pickPlane(e.clientX, e.clientY, PART_REST_Y), P = job.item.part;
+      if (Math.hypot(pt.x - job.part.x, pt.y - job.part.y) < P.r + 16) {
+        const up = pickPlane(e.clientX, e.clientY, PART_LIFT_Y);
+        dragPart = { dx: job.part.x - up.x, dy: job.part.y - up.y };
+        burst(0.08, 2000, 0.03);
+      }
+    }
+  });
+  window.addEventListener('pointermove', (e) => {
+    if (!job || job.finished) return;
+    hover = e.pointerType === 'mouse' ? liftedPick(e) : null;
+    const s = step();
+    if (dragPart) { const pt = pickPlane(e.clientX, e.clientY, PART_LIFT_Y); job.part.x = pt.x + dragPart.dx; job.part.y = pt.y + dragPart.dy; dragPart.cx = e.clientX; dragPart.cy = e.clientY; return; }
+    if (!pointer || !s) return;
+    const pt = liftedPick(e);
+    if (!pt) return;
+    const dx = pt.x - pointer.x, dy = pt.y - pointer.y, dist = Math.hypot(dx, dy);
+    if (s.type === 'rub') {
+      const n = Math.max(1, Math.ceil(dist / 5));
+      for (let i = 1; i <= n; i++) stamp(pointer.x + (dx * i) / n, pointer.y + (dy * i) / n);
+      scrubLevel = clamp(dist / 14, 0.2, 1);
+    } else if (s.type === 'sharpen') sharpenMove(pointer.x, pointer.y, pt.x, pt.y);
+    pointer = pt;
+  });
+  const release = () => {
+    pointer = null; holding = false;
+    if (dragPart) {
+      // The part floats under the finger, so drop it where the finger is pointing on the item.
+      const P = job.item.part, under = dragPart.cx != null ? pickSurface(dragPart.cx, dragPart.cy) : null;
+      const near = (x, y) => Math.hypot(x - P.target[0], y - P.target[1]) < 46;
+      if ((under && near(under.x, under.y)) || near(job.part.x, job.part.y)) placePart();
+      dragPart = null;
+    }
+  };
+  window.addEventListener('pointerup', release);
+  window.addEventListener('pointercancel', release);
+  window.addEventListener('contextmenu', (e) => e.preventDefault());
+
+  function tapScrew(x, y, out) {
+    const sc = job.screws.find((s) => (out ? s.state === 'in' : s.state === 'out') && Math.hypot(s.x - x, s.y - y) < 24);
+    if (!sc) return;
+    sc.state = 'moving'; sc.dir = out ? 'out' : 'in'; sc.t = out ? 0 : 1; sc.spin = 0;
+    sfx.ratchet(); buzz(8);
+    composeDirty = true;
+  }
+  function tapDent(x, y) {
+    const d = job.dents.find((d) => d.hits < 3 && Math.hypot(d.x - x, d.y - y) < d.r + 10);
+    if (!d) { burst(0.05, 800, 0.04); return; }
+    d.hits++;
+    sfx.clank(); buzz(25);
+    emit('spark', d.x, d.y, 4);
+    applyHeights();
+    if (d.hits >= 3) setTimeout(sfx.ding, 120);
+    const left = job.dents.filter((v) => v.hits < 3).length;
+    stepProgress = 1 - left / job.dents.length; setBar(stepProgress);
+    if (!left) completeStep();
+  }
+  function placePart() {
+    const J = job, P = J.item.part;
+    J.part.placed = true; J.part.x = P.target[0]; J.part.y = P.target[1];
+    const [c, g] = mk(); P.draw(g, P.target[0], P.target[1]);
+    const p = pillow(maskFloat(c), 4);
+    J.partH = p.map((v) => v * J.cfg.part);
+    applyHeights();
+    disposeMesh(partMesh); partMesh = null;
+    if (P.drawOld) {
+      oldPartMesh = makePartMesh(P.drawOld, J.cfg.partSize, true);
+      oldPartMesh.position.copy(designToWorld(P.target[0], P.target[1], 0.02));
+      oldPartMesh.userData.t = 0;
+      sfx.glass();
+    }
+    updateAlpha();
+    sfx.snap(); buzz(20);
+    composeDirty = true;
+    completeStep();
+  }
+  function sharpenMove(x0, y0, x1, y1) {
+    const [ex0, ey0, ex1, ey1] = job.item.edge;
+    const ux = ex1 - ex0, uy = ey1 - ey0, len = Math.hypot(ux, uy);
+    const nx = ux / len, ny = uy / len;
+    const t1 = (x1 - ex0) * nx + (y1 - ey0) * ny, d1 = Math.abs((x1 - ex0) * -ny + (y1 - ey0) * nx);
+    if (t1 < -20 || t1 > len + 20 || d1 > 34) { scrubLevel = 0; return; }
+    const along = Math.abs((x1 - x0) * nx + (y1 - y0) * ny);
+    job.edgeProgress = clamp(job.edgeProgress + along / (len * 6), 0, 1);
+    scrubLevel = clamp(along / 10, 0.2, 1);
+    if (Math.random() < 0.5) emit('spark', ex0 + nx * t1, ey0 + ny * t1, 2);
+    composeDirty = true;
+    stepProgress = job.edgeProgress; setBar(stepProgress);
+    if (job.edgeProgress >= 1) completeStep();
+  }
+
+  // ---------- Overlay (tools, sparks, hints) ----------
+  function drawOverlay(now) {
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    if (!job) return;
+    const st = !job.finished && step();
+    if (st && st.type === 'part' && !job.part.placed && !job.item.part.drawOld) {
+      const P = job.item.part;
+      ctx.save(); ctx.setLineDash([6, 5]); ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 2; ctx.beginPath();
+      for (let k = 0; k <= 40; k++) {
+        const a = (k / 40) * TAU, [sx, sy] = toScreen(new THREE.Vector3((P.target[0] + Math.cos(a) * (P.r - 3)) / 100 - 2, 0.05, (P.target[1] + Math.sin(a) * (P.r - 3)) / 100 - 1.5));
+        k ? ctx.lineTo(sx, sy) : ctx.moveTo(sx, sy);
+      }
+      ctx.stroke(); ctx.restore();
+    }
+    drawParts();
+    if (hammerAnim) {
+      const h = hammerAnim, sw = h.t < 0.1 ? -0.9 + h.t * 9 : 0;
+      drawTool(ctx, 'hammer', h.sx + 18, h.sy - (TOUCH_LIFT / 2), 1.2, { swing: sw });
+    }
+    const tp = pointer || hover;
+    if (tp && st && ['rub', 'sharpen'].includes(st.type)) {
+      const color = st.tool === 'spray' ? (PAINTS.find((p) => p.id === job.paintId) || PAINTS[0]).c[0] : undefined;
+      const wob = pointer ? Math.sin(now / 40) * 2 : 0;
+      const [sx, sy] = toScreen(tp.p);
+      drawTool(ctx, st.tool, sx + wob, sy, 1.15, { color });
+    }
+  }
+
+  // ---------- Frame ----------
+  let last = performance.now(), lastMaps = 0;
+  function frame(now) {
+    const dt = Math.min((now - last) / 1000, 1 / 30);
+    last = now;
+    if (job && !job.finished) {
+      const s = step();
+      if (s && s.type === 'soak' && !advancing) {
+        if (holding) {
+          job.soakLevel = Math.min(1, job.soakLevel + dt * 0.45);
+          if (Math.random() < 0.5) emit('bubble', 20 + Math.random() * 360, 20 + Math.random() * 260, 1);
+          if (Math.random() < 0.06) sfx.bubble();
+          stepProgress = job.soakLevel; setBar(stepProgress);
+          if (job.soakLevel >= 1) {
+            job.soaked = true;
+            // Vinegar loosens the rust: it turns lighter and comes off faster.
+            const g = job.layers.rust.getContext('2d');
+            px(g, () => { g.globalCompositeOperation = 'source-atop'; g.fillStyle = 'rgba(230,140,70,.28)'; g.fillRect(0, 0, 9999, 9999); });
+            composeDirty = true;
+            completeStep();
+          }
+        }
+      } else if (job.soakLevel > 0) job.soakLevel = Math.max(0, job.soakLevel - dt * 0.9);
+      if (s && s.type === 'rub' && pointer && now - lastCheck > 140) { lastCheck = now; checkProgress(); }
+      setScrub(s ? s.tool : '', (pointer && s && (s.type === 'rub' || s.type === 'sharpen')) ? scrubLevel : holding ? 0.5 : 0);
+      if (!pointer) scrubLevel *= Math.exp(-dt * 10);
+      // Screws spin out and lift away, or spin back down into their holes.
+      let moving = false;
+      for (const m of screwMeshes) {
+        const sc = m.userData.s;
+        if (sc.state === 'moving') {
+          moving = true;
+          sc.spin = (sc.spin || 0) + dt * 18;
+          sc.t += (sc.dir === 'out' ? 1 : -1) * dt * 2.2;
+          if (sc.dir === 'out' && sc.t >= 1) sc.state = 'out';
+          if (sc.dir === 'in' && sc.t <= 0) { sc.state = 'in'; sc.t = 0; sfx.snap(); composeDirty = true; }
+        }
+        m.visible = sc.state !== 'out';
+        m.position.y = m.userData.baseY + sc.t * 0.35;
+        m.rotation.y = sc.spin || 0;
+        m.userData.head.material.opacity = sc.dir === 'out' && sc.state === 'moving' ? 1 - sc.t * 0.7 : 1;
+      }
+      if (s && s.type === 'screws' && !moving && !advancing) {
+        const target = s.out ? 'out' : 'in';
+        const done = job.screws.filter((sc) => sc.state === target).length;
+        stepProgress = done / job.screws.length; setBar(stepProgress);
+        if (done === job.screws.length) completeStep();
+      }
+    } else setScrub('', 0);
+    if (job) {
+      tub.visible = job.soakLevel > 0.001;
+      tub.scale.y = Math.max(0.001, job.soakLevel * 0.42);
+      if (partMesh) {
+        const lift = dragPart ? PART_LIFT_Y : PART_REST_Y;
+        partMesh.position.set(job.part.x / 100 - 2, partMesh.position.y + (lift - partMesh.position.y) * (1 - Math.exp(-dt * 16)), job.part.y / 100 - 1.5);
+      }
+      if (oldPartMesh) {
+        const t = (oldPartMesh.userData.t += dt);
+        oldPartMesh.position.y = 0.3 + t * 1.2 - t * t * 3;
+        oldPartMesh.position.z += dt * 1.6;
+        oldPartMesh.rotation.x = t * 1.4;
+        if (t > 0.9) { disposeMesh(oldPartMesh); oldPartMesh = null; }
+      }
+    }
+    if (hammerAnim) { hammerAnim.t += dt; if (hammerAnim.t > 0.25) hammerAnim = null; }
+    updateParts(dt);
+    // Camera: a slow sway while idle, a showcase swing when the job is done.
+    const busy = pointer || dragPart || holding;
+    cam.sway += ((busy ? 0 : 1) - cam.sway) * (1 - Math.exp(-dt * (busy ? 6 : 0.8)));
+    cam.az = 0.07 * Math.sin(now / 2200) * cam.sway;
+    if (cam.showT >= 0) {
+      cam.showT += dt;
+      cam.az = 0.38 * Math.sin(Math.min(1, cam.showT / 3.2) * TAU) * (1 - Math.min(1, cam.showT / 3.2) * 0.3);
+      if (cam.showT > 3.2) { cam.showT = -1; cam.sway = 0; }
+    }
+    if (pendingCapture) cam.az = 0;
+    placeCamera();
+    if (job) {
+      if (composeDirty) compose();
+      if (mapsDirty && now - lastMaps > 160) { lastMaps = now; updateMaps(); }
+    }
+    renderer.render(scene, camera);
+    if (pendingCapture && job) {
+      const kind = pendingCapture; pendingCapture = null;
+      const shot = captureItem();
+      if (kind === 'before') job.before = shot; else afterCaptured(shot);
+    }
+    drawOverlay(now);
+    requestAnimationFrame(frame);
+  }
+
+  // ---------- Paint picker & shop ----------
+  function renderSwatches() {
+    $('swatches').innerHTML = PAINTS.filter((p) => save.paints.includes(p.id))
+      .map((p) => `<button class="swatch" type="button" data-id="${p.id}" aria-label="${p.name}" aria-pressed="${p.id === job.paintId}" style="background:linear-gradient(160deg, ${p.c[0]}, ${p.c[1]})"></button>`).join('');
+  }
+  $('swatches').addEventListener('click', (e) => {
+    const b = e.target.closest('.swatch');
+    if (!b || !job.full.paint) return;
+    job.paintId = b.dataset.id;
+    job.full.paint = makePaint(job.masks.body, job.paintId, rngFor(job.n));
+    composeDirty = true;
+    renderSwatches();
+    tone(880, 0.06, 0.05);
+  });
+  let shopFrom = null;
+  function renderShop() {
+    $('shopCoins').textContent = save.coins.toLocaleString();
+    $('shopGrid').innerHTML = PAINTS.map((p) => {
+      const own = save.paints.includes(p.id);
+      return `<button class="item${own ? ' owned' : ''}${!own && save.coins < p.price ? ' locked' : ''}" type="button" data-id="${p.id}"><i class="chip" style="background:linear-gradient(160deg, ${p.c[0]}, ${p.c[1]})"></i><b>${p.name}</b><span>${own ? 'Owned' : `<i class="coin"></i>${p.price}`}</span></button>`;
+    }).join('');
+  }
+  function openShop() { shopFrom = $('done').hidden ? null : 'done'; $('done').hidden = true; $('shop').hidden = false; $('shopMsg').textContent = 'Colors you own show up whenever a job needs paint.'; renderShop(); }
+  function closeShop() { $('shop').hidden = true; if (shopFrom) $(shopFrom).hidden = false; if (job && step() && step().layer === 'paint') renderSwatches(); }
+  $('shopGrid').addEventListener('click', (e) => {
+    const el = e.target.closest('.item');
+    if (!el) return;
+    ensureAudio();
+    const p = PAINTS.find((x) => x.id === el.dataset.id);
+    if (save.paints.includes(p.id)) { $('shopMsg').textContent = `You already own ${p.name}.`; return; }
+    if (save.coins < p.price) {
+      $('shopMsg').textContent = `You need ${p.price - save.coins} more coins for ${p.name}.`;
+      el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake');
+      return;
+    }
+    save.coins -= p.price; save.paints.push(p.id); persist();
+    $('coins').textContent = save.coins.toLocaleString();
+    $('shopMsg').textContent = `${p.name} added to your paints!`;
+    [0, 4, 7].forEach((s, i) => tone(660 * Math.pow(2, s / 12), 0.14, 0.08, i * 0.06));
+    renderShop();
+  });
+  $('shopBtn').addEventListener('click', (e) => { e.currentTarget.blur(); ensureAudio(); openShop(); });
+  $('shopBtn2').addEventListener('click', (e) => { e.currentTarget.blur(); openShop(); });
+  $('shopDone').addEventListener('click', (e) => { e.currentTarget.blur(); closeShop(); });
+  $('nextBtn').addEventListener('click', (e) => { e.currentTarget.blur(); ensureAudio(); startJob(save.level); });
+  window.addEventListener('keydown', (e) => { if (e.code === 'Escape' && !$('shop').hidden) closeShop(); });
+  function renderMute() {
+    $('icoOn').hidden = save.muted; $('icoOff').hidden = !save.muted;
+    $('mute').setAttribute('aria-pressed', String(save.muted));
+    $('mute').setAttribute('aria-label', save.muted ? 'Turn sound on' : 'Mute sound');
+  }
+  $('mute').addEventListener('click', (e) => { e.currentTarget.blur(); ensureAudio(); save.muted = !save.muted; persist(); renderMute(); });
+  window.addEventListener('resize', layout);
+
+  if (window.__RTS_TEST__) {
+    window.__rts = {
+      get job() { return job; }, get step() { return job && step(); }, BW, BH,
+      toScreen(x, y) { return toScreen(designToWorld(x, y, 0)); },
+      // Test-only: jump straight to a step as if the earlier ones were done.
+      skipTo(i) {
+        for (let k = job.stepIdx; k < i; k++) {
+          const s = STEPS[job.item.steps[k]];
+          if (s.type === 'soak') job.soaked = true;
+          if (s.layer && s.reveal) { const g = job.reveals[s.layer].getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, BW, BH); }
+          else if (s.layer) { const g = job.layers[s.layer].getContext('2d'); px(g, () => g.clearRect(0, 0, 9999, 9999)); }
+          if (s.type === 'screws') job.screws.forEach((sc) => { sc.state = s.out ? 'out' : 'in'; });
+          if (s.type === 'dents') job.dents.forEach((d) => { d.hits = 3; });
+        }
+        job.stepIdx = i; composeDirty = true; applyHeights(); enterStep();
+      },
+      complete() { completeStep(); },
+    };
+  }
+
+  window.claude?.hot?.snapshot?.(() => ({}));
+  let booted = false;
+  function start() {
+    if (booted) return;
+    booted = true;
+    renderMute();
+    $('coins').textContent = save.coins.toLocaleString();
+    layout();
+    startJob(save.level);
+    requestAnimationFrame(frame);
+  }
+  window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+})();
+</script>
+
+<script>
+  if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+</script>
+</body>
+</html>
