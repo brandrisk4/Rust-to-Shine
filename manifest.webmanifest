@@ -2,7 +2,7 @@
   "name": "Rust to Shine",
   "short_name": "Rust to Shine",
   "description": "Soak, scrub, sand, sharpen, repair and repaint rusty tools and toys in 3D, then compare before and after.",
-  "id": "./",
+  "id": "/rust-to-shine",
   "start_url": "./",
   "scope": "./",
   "display": "fullscreen",
