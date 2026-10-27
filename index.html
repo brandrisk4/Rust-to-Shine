@@ -159,6 +159,34 @@ body {
 .item.locked i.chip { filter: saturate(.4) brightness(.7); }
 .item.shake { animation: shake .35s; }
 @keyframes shake { 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+.tabs { display: flex; gap: 6px; padding: 4px; border-radius: 12px; background: var(--panel-2); }
+.tab {
+  flex: 1; appearance: none; border: 0; height: 38px; border-radius: 9px; background: transparent; cursor: pointer;
+  font-family: var(--font-body); font-weight: 800; font-size: 15px; color: var(--ink-soft); touch-action: manipulation;
+}
+.tab[aria-selected="true"] { background: var(--panel); color: var(--ink); box-shadow: 0 1px 0 var(--line); }
+.grid.tools { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.item img { width: 56px; height: 56px; }
+.item small { font-size: 12px; line-height: 1.3; color: var(--ink-soft); text-align: center; padding: 0 4px; }
+.hint-btn { flex: none; color: var(--coin); }
+.hint-btn:active { transform: scale(.94); }
+.setting { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; }
+.setting.col { flex-direction: column; align-items: stretch; gap: 8px; }
+.setting > span { font-weight: 600; }
+.setting small { display: block; font-weight: 400; font-size: 13px; color: var(--ink-soft); }
+.toggle {
+  appearance: none; border: 1px solid var(--line); background: var(--panel-2); color: var(--ink-soft); cursor: pointer;
+  min-width: 64px; height: 36px; border-radius: 18px; font-family: var(--font-body); font-weight: 800; font-size: 14px; touch-action: manipulation;
+}
+.toggle[aria-pressed="true"] { background: #2E6E57; color: var(--ink); border-color: transparent; }
+.seg { display: flex; gap: 6px; }
+.seg button {
+  flex: 1; appearance: none; border: 1px solid var(--line); background: var(--panel-2); color: var(--ink-soft); cursor: pointer;
+  height: 38px; border-radius: 10px; font-family: var(--font-body); font-weight: 700; font-size: 13px; touch-action: manipulation;
+}
+.seg button[aria-pressed="true"] { background: #2E6E57; color: var(--ink); border-color: transparent; }
+.btn.danger { color: #FF9C8A; }
+.toggle:focus-visible, .seg button:focus-visible, .tab:focus-visible { outline: 3px solid var(--rust); outline-offset: 2px; }
 .toast {
   position: fixed; z-index: 2; left: 0; right: 0; top: 34%; text-align: center; pointer-events: none;
   font-family: var(--font-display); font-size: 26px; color: var(--ink); text-shadow: 0 3px 0 rgba(0, 0, 0, .35); opacity: 0;
@@ -175,11 +203,10 @@ body {
 
 <div class="top gutter">
   <div class="icons">
-    <button class="icon-btn" id="mute" type="button" aria-label="Mute sound" aria-pressed="false">
-      <svg id="icoOn" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-      <svg id="icoOff" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" hidden><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16.5 9.5l5 5M21.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    <button class="icon-btn" id="settingsBtn" type="button" aria-label="Settings">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="12" r="3.2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
     </button>
-    <button class="icon-btn" id="shopBtn" type="button" aria-label="Open the paint shop">
+    <button class="icon-btn" id="shopBtn" type="button" aria-label="Open the shop">
       <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="7" y="8" width="10" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9 8V5h6v3M12 3v2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
     </button>
   </div>
@@ -201,6 +228,9 @@ body {
         <div id="stepLabel">Hold to soak it in vinegar</div>
         <div class="bar"><div id="barFill"></div></div>
       </div>
+      <button class="icon-btn hint-btn" id="hintBtn" type="button" aria-label="Show missed spots" hidden>
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M9 17h6M10 20.5h4M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.3 1.1 2.2h5c0-.9.4-1.6 1.1-2.2A6 6 0 0 0 12 3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
     </div>
     <div class="swatches" id="swatches" hidden></div>
   </div>
@@ -218,17 +248,38 @@ body {
     <div class="reward"><i class="coin"></i><span id="doneCoins">+0</span></div>
     <div class="row">
       <button class="btn primary" id="nextBtn" type="button">Next job</button>
-      <button class="btn ghost" id="shopBtn2" type="button">Paint shop</button>
+      <button class="btn ghost" id="shopBtn2" type="button">Shop</button>
     </div>
   </div>
 </div>
 
 <div class="screen gutter" id="shop" hidden>
-  <div class="sheet" role="dialog" aria-label="Paint shop">
-    <div class="shop-head"><h2>Paint Shop</h2><span class="wallet"><i class="coin"></i><span id="shopCoins">0</span></span></div>
+  <div class="sheet" role="dialog" aria-label="Shop">
+    <div class="shop-head"><h2>Shop</h2><span class="wallet"><i class="coin"></i><span id="shopCoins">0</span></span></div>
+    <div class="tabs" role="tablist">
+      <button class="tab" id="tabPaints" role="tab" aria-selected="true" type="button">Paints</button>
+      <button class="tab" id="tabTools" role="tab" aria-selected="false" type="button">Tools</button>
+    </div>
     <p id="shopMsg" class="dim">Colors you own show up whenever a job needs paint.</p>
     <div class="grid" id="shopGrid"></div>
     <button class="btn primary" id="shopDone" type="button">Done</button>
+  </div>
+</div>
+
+<div class="screen gutter" id="settings" hidden>
+  <div class="sheet" role="dialog" aria-label="Settings">
+    <h2>Settings</h2>
+    <div class="setting"><span>Sound</span><button class="toggle" id="setSound" type="button" aria-pressed="true">On</button></div>
+    <div class="setting"><span>Vibration</span><button class="toggle" id="setVibe" type="button" aria-pressed="true">On</button></div>
+    <div class="setting"><span>Missed-spot glow<small>Leftover spots glow once a step is 80% done</small></span><button class="toggle" id="setHints" type="button" aria-pressed="true">On</button></div>
+    <div class="setting col"><span>Tool position on touch screens</span>
+      <div class="seg" id="setLift"><button type="button" data-v="0">Under finger</button><button type="button" data-v="28">Just above</button><button type="button" data-v="46">Above</button></div>
+    </div>
+    <div class="setting col"><span>Graphics</span>
+      <div class="seg" id="setGfx"><button type="button" data-v="high">Best looking</button><button type="button" data-v="low">Battery saver</button></div>
+    </div>
+    <button class="btn ghost danger" id="resetBtn" type="button">Reset all progress</button>
+    <button class="btn primary" id="settingsDone" type="button">Done</button>
   </div>
 </div>
 
@@ -454,7 +505,123 @@ body {
         g.fillStyle = 'rgba(0,0,0,.25)'; g.font = '800 9px Manrope, sans-serif'; g.textAlign = 'center'; g.fillText('FORGED 16 OZ', 150, 129);
       },
     },
+    {
+      id: 'toolbox', name: 'Rusty Toolbox', rust: 0.55, dirt: 0.6, body: '#B03A2E', paint: 'red',
+      steps: ['magnet', 'wash', 'rust', 'strip', 'paint', 'polish'],
+      rustOn: ['metal', 'body'],
+      bits: 14,
+      regions: {
+        metal(g) {
+          g.lineWidth = 10; g.lineCap = 'round'; g.strokeStyle = '#fff';
+          g.beginPath(); g.moveTo(150, 124); g.quadraticCurveTo(152, 82, 200, 82); g.quadraticCurveTo(248, 82, 250, 124); g.stroke();
+          rr(g, 106, 112, 18, 28, 4); rr(g, 276, 112, 18, 28, 4);
+          g.fillRect(70, 150, 260, 6);
+        },
+        body(g) { rr(g, 70, 118, 260, 128, 12); },
+      },
+      details(g) {
+        g.fillStyle = 'rgba(255,255,255,.85)'; rr(g, 166, 188, 68, 26, 4);
+        g.fillStyle = '#1D1F22'; g.font = '800 14px Manrope, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('TOOLS', 200, 201.5);
+        g.strokeStyle = 'rgba(0,0,0,.25)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(72, 160); g.lineTo(328, 160); g.stroke();
+      },
+    },
+    {
+      id: 'watch', name: 'Pocket Watch', rust: 0.6, dirt: 0.45,
+      rustColors: ['#3B3420', '#4E4426', '#2E2A1C', '#5A4A2A', '#6B5A30', '#26301F'],
+      steps: ['wash', 'tarnish', 'polish', 'wind'],
+      rustOn: ['brass', 'metal'],
+      crown: [200, 60],
+      regions: {
+        metal(g) { g.lineWidth = 7; g.strokeStyle = '#fff'; g.beginPath(); g.arc(200, 38, 17, 0, TAU); g.stroke(); },
+        enamel(g) { circ(g, 200, 166, 84); },
+        brass(g) { circ(g, 200, 166, 104); rr(g, 186, 52, 28, 16, 5); },
+      },
+      details(g, J) {
+        g.strokeStyle = '#2B2B30'; g.fillStyle = '#2B2B30'; g.lineCap = 'butt';
+        for (let i = 0; i < 60; i++) {
+          const a = (i / 60) * TAU, r0 = i % 5 ? 76 : 69;
+          g.lineWidth = i % 5 ? 1 : 2.5;
+          g.beginPath(); g.moveTo(200 + Math.cos(a) * r0, 166 + Math.sin(a) * r0); g.lineTo(200 + Math.cos(a) * 80, 166 + Math.sin(a) * 80); g.stroke();
+        }
+        g.font = '700 15px Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+        ['XII', 'III', 'VI', 'IX'].forEach((t, i) => { const a = (i / 4) * TAU - Math.PI / 2; g.fillText(t, 200 + Math.cos(a) * 56, 166 + Math.sin(a) * 56); });
+        g.font = '800 7px Manrope, sans-serif'; g.fillText('PRECISION', 200, 134);
+        g.lineWidth = 1; g.beginPath(); g.arc(200, 200, 14, 0, TAU); g.stroke();
+        const m = J.extra.minute ?? 610, sec = J.extra.second ?? 0;
+        clockHand(g, 200, 166, ((m % 720) / 720) * TAU, 40, 4.5);
+        clockHand(g, 200, 166, ((m % 60) / 60) * TAU, 62, 3);
+        g.strokeStyle = '#B5341F'; clockHand(g, 200, 200, (sec / 60) * TAU, 12, 1.2);
+        g.fillStyle = '#2B2B30'; circ(g, 200, 166, 4);
+        g.strokeStyle = 'rgba(0,0,0,.3)'; g.lineWidth = 1;
+        for (let k = 0; k < 7; k++) { g.beginPath(); g.moveTo(189 + k * 3.6, 53); g.lineTo(189 + k * 3.6, 67); g.stroke(); }
+      },
+    },
+    {
+      id: 'sign', name: 'Garage Sign', rust: 0.65, dirt: 0.5, body: '#1F5FA8', paint: 'red',
+      steps: ['wash', 'rust', 'strip', 'paint', 'stencil'],
+      rustOn: ['body', 'letters', 'metal'],
+      regions: {
+        metal(g) { for (const [x, y] of [[54, 88], [346, 88], [54, 212], [346, 212]]) circ(g, x, y, 5.5); },
+        letters(g) {
+          let size = 72;
+          g.textAlign = 'center'; g.textBaseline = 'middle';
+          do { g.font = `900 ${size}px "Arial Black", Impact, sans-serif`; size -= 2; } while (g.measureText('GARAGE').width > 276 && size > 30);
+          g.fillText('GARAGE', 200, 153);
+        },
+        body(g) { rr(g, 36, 70, 328, 160, 16); },
+      },
+      details(g) { g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 2; g.beginPath(); g.roundRect(48, 82, 304, 136, 10); g.stroke(); },
+    },
+    {
+      id: 'radio', name: 'Vintage Radio', rust: 0.35, dirt: 0.65,
+      steps: ['wash', 'grime', 'oil', 'polish', 'tune'],
+      rustOn: ['metal'],
+      regions: {
+        metal(g) { circ(g, 254, 198, 16); circ(g, 302, 198, 16); rr(g, 82, 252, 40, 10, 3); rr(g, 278, 252, 40, 10, 3); rr(g, 160, 64, 80, 8, 3); },
+        glass(g) { rr(g, 236, 96, 84, 56, 8); },
+        fabric(g) { rr(g, 84, 92, 136, 140, 14); },
+        wood(g) { rr(g, 60, 70, 280, 186, 28); },
+      },
+      details(g, J) {
+        g.fillStyle = 'rgba(40,30,20,.85)'; g.font = '800 7px Manrope, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'alphabetic';
+        [54, 70, 90, 110, 130, 160].forEach((f, i) => g.fillText(String(f), 246 + i * 13, 109));
+        g.strokeStyle = 'rgba(40,30,20,.6)'; g.lineWidth = 1;
+        for (let i = 0; i <= 20; i++) { const x = 244 + i * 3.4; g.beginPath(); g.moveTo(x, 114); g.lineTo(x, i % 5 ? 118 : 122); g.stroke(); }
+        const nx = 244 + (J.extra.tune ?? 0.08) * 68;
+        g.strokeStyle = '#D6331F'; g.lineWidth = 2; g.beginPath(); g.moveTo(nx, 100); g.lineTo(nx, 148); g.stroke();
+        g.fillStyle = 'rgba(255,240,220,.65)'; g.font = 'italic 700 14px Georgia, serif'; g.fillText('Melody', 278, 178);
+        g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = 1.2;
+        for (const cx of [254, 302]) for (let k = 0; k < 12; k++) { const a = (k / 12) * TAU; g.beginPath(); g.moveTo(cx + Math.cos(a) * 11, 198 + Math.sin(a) * 11); g.lineTo(cx + Math.cos(a) * 15, 198 + Math.sin(a) * 15); g.stroke(); }
+      },
+    },
+    {
+      id: 'skate', name: 'Old Skateboard', rust: 0.7, dirt: 0.55, body: '#7A3FB0', paint: 'orange',
+      steps: ['wash', 'rust', 'strip', 'paint', 'spin'],
+      rustOn: ['metal'],
+      wheels: [[106, 72], [106, 228], [294, 72], [294, 228]],
+      regions: {
+        metal(g) { rr(g, 88, 96, 36, 108, 6); rr(g, 276, 96, 36, 108, 6); rr(g, 100, 92, 12, 116, 4); rr(g, 288, 92, 12, 116, 4); },
+        rubber(g) { for (const [x, y] of [[106, 72], [106, 228], [294, 72], [294, 228]]) circ(g, x, y, 24); },
+        body(g) { rr(g, 28, 106, 344, 88, 44); },
+      },
+      details(g, J) {
+        const ws = J.extra.wheels || [];
+        J.item.wheels.forEach(([x, y], i) => {
+          const a = ws[i] ? ws[i].a : 0;
+          g.fillStyle = '#D9D4C7'; circ(g, x, y, 8);
+          g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 2.2; g.lineCap = 'round';
+          for (let k = 0; k < 3; k++) { const t = a + (k / 3) * TAU; g.beginPath(); g.moveTo(x + Math.cos(t) * 11, y + Math.sin(t) * 11); g.lineTo(x + Math.cos(t) * 20, y + Math.sin(t) * 20); g.stroke(); }
+        });
+        g.fillStyle = 'rgba(0,0,0,.4)';
+        for (const bx of [94, 282]) for (const [dx, dy] of [[4, 6], [26, 6], [4, 96], [26, 96]]) circ(g, bx + dx, 96 + dy, 2.4);
+      },
+    },
   ];
+  const ITEMS_BY_ID = Object.fromEntries(ITEMS.map((it) => [it.id, it]));
+  // New mechanics are spread out so every few jobs bring something different.
+  const JOB_ORDER = ['wrench', 'padlock', 'knife', 'toolbox', 'car', 'watch', 'lantern', 'sign', 'can', 'radio', 'pan', 'skate', 'hammer'];
+  const itemFor = (n) => ITEMS_BY_ID[JOB_ORDER[(n - 1) % JOB_ORDER.length]];
+  function clockHand(g, cx, cy, a, len, w) { g.lineWidth = w; g.lineCap = 'round'; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + Math.sin(a) * len, cy - Math.cos(a) * len); g.stroke(); }
 
   const STEPS = {
     soak: { type: 'soak', tool: 'tub', label: 'Hold anywhere to soak it in vinegar' },
@@ -474,7 +641,27 @@ body {
     part: { type: 'part', tool: 'hand', label: 'Drag the new part into place' },
     dents: { type: 'dents', tool: 'hammer', label: 'Tap the dents to hammer them out' },
     sharpen: { type: 'sharpen', tool: 'stone', label: 'Swipe back and forth along the edge' },
+    tarnish: { type: 'rub', layer: 'rust', tool: 'brush', label: 'Scrub off the tarnish', strength: 0.22 },
+    stencil: { type: 'rub', layer: 'letters', tool: 'spray', label: 'Spray through the stencil to repaint the letters', strength: 0.36, reveal: true },
+    magnet: { type: 'magnet', tool: 'magnet', label: 'Drag the magnet to pick up the loose bits' },
+    wind: { type: 'wind', tool: 'key', label: 'Circle your finger around the crown to wind it' },
+    tune: { type: 'tune', tool: 'dial', label: 'Drag left or right to tune in a station' },
+    spin: { type: 'spin', tool: 'hand', label: 'Flick each wheel until it spins freely' },
   };
+
+  // Power tools bought in the shop: bigger, stronger or faster versions of the hand tools.
+  const UPGRADES = [
+    { id: 'washer', tool: 'sponge', name: 'Pressure Washer', price: 80, desc: 'Blasts dirt off twice as fast', radius: 1.45, strength: 1.9 },
+    { id: 'drill', tool: 'brush', name: 'Drill Wire Wheel', price: 120, desc: 'Spins rust and tarnish away twice as fast', radius: 1.35, strength: 2 },
+    { id: 'sander', tool: 'sandpaper', name: 'Orbital Sander', price: 140, desc: 'Sands bigger patches, faster', radius: 1.45, strength: 1.8 },
+    { id: 'heatgun', tool: 'scraper', name: 'Heat Gun', price: 150, desc: 'Old paint bubbles up and peels fast', radius: 1.35, strength: 2 },
+    { id: 'spraygun', tool: 'spray', name: 'Spray Gun', price: 170, desc: 'Wider, smoother paint coverage', radius: 1.5, strength: 1.7 },
+    { id: 'buffer', tool: 'cloth', name: 'Buffing Wheel', price: 190, desc: 'Polishes to a mirror in half the time', radius: 1.45, strength: 1.9 },
+    { id: 'tank', tool: 'tub', name: 'Electrolysis Tank', price: 160, desc: 'Soaks twice as fast and loosens more rust', speed: 2 },
+    { id: 'belt', tool: 'stone', name: 'Belt Sander', price: 130, desc: 'Sharpens in half the strokes', speed: 2 },
+    { id: 'puller', tool: 'hammer', name: 'Dent Puller', price: 110, desc: 'Pops each dent out in 2 taps' },
+    { id: 'supermagnet', tool: 'magnet', name: 'Super Magnet', price: 90, desc: 'Grabs loose bits from twice as far', radius: 2 },
+  ];
 
   const PAINTS = [
     { id: 'red', name: 'Cherry', price: 0, c: ['#EE5544', '#A62418'] },
@@ -494,13 +681,19 @@ body {
 
   // ---------- Save (this device only) ----------
   const SAVE_KEY = 'rusttoshine.save.v1';
-  const save = { level: 1, coins: 0, paints: PAINTS.filter((p) => !p.price).map((p) => p.id), muted: false };
+  const DEFAULT_SETTINGS = { vibe: true, hints: true, lift: 46, gfx: 'high' };
+  const save = { level: 1, coins: 0, paints: PAINTS.filter((p) => !p.price).map((p) => p.id), tools: [], muted: false, settings: { ...DEFAULT_SETTINGS } };
   try { Object.assign(save, JSON.parse(localStorage.getItem(SAVE_KEY)) || {}); } catch { /* fresh start */ }
   if (!Array.isArray(save.paints)) save.paints = [];
+  if (!Array.isArray(save.tools)) save.tools = [];
+  save.settings = { ...DEFAULT_SETTINGS, ...(save.settings || {}) };
   PAINTS.filter((p) => !p.price).forEach((p) => { if (!save.paints.includes(p.id)) save.paints.push(p.id); });
   save.level = Math.max(1, save.level | 0);
   save.coins = Math.max(0, save.coins | 0);
   function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch { /* storage unavailable */ } }
+  const upg = (tool) => UPGRADES.find((u) => u.tool === tool && save.tools.includes(u.id));
+  const toolFor = (tool) => (upg(tool) || {}).id || tool;
+  const dentTaps = () => (upg('hammer') ? 2 : 3);
 
   // ---------- Region styling ----------
   function metalGrad(g, y0, y1) {
@@ -531,6 +724,19 @@ body {
         g.stroke();
       }
     },
+    brass(g, rng) {
+      const gr = g.createLinearGradient(0, 50, 0, 270);
+      gr.addColorStop(0, '#FFF2C2'); gr.addColorStop(0.3, '#D9A84A'); gr.addColorStop(0.5, '#F7DA8C'); gr.addColorStop(0.8, '#9A7020'); gr.addColorStop(1, '#D8B260');
+      g.fillStyle = gr; g.fillRect(0, 0, BW, BH);
+      for (let i = 0; i < 120; i++) { g.fillStyle = i % 2 ? 'rgba(255,255,255,.12)' : 'rgba(80,50,0,.08)'; g.fillRect(rng() * BW, rng() * BH, 16 + rng() * 40, 0.6); }
+    },
+    enamel(g) { const gr = g.createRadialGradient(190, 150, 10, 200, 166, 90); gr.addColorStop(0, '#FFFDF6'); gr.addColorStop(1, '#EDE3CC'); g.fillStyle = gr; g.fillRect(0, 0, BW, BH); },
+    fabric(g) {
+      g.fillStyle = '#6A5240'; g.fillRect(0, 0, BW, BH);
+      for (let x = 0; x < BW; x += 3) { g.fillStyle = x % 6 ? 'rgba(255,230,190,.12)' : 'rgba(0,0,0,.18)'; g.fillRect(x, 0, 1.4, BH); }
+      for (let y = 0; y < BH; y += 3) { g.fillStyle = y % 6 ? 'rgba(255,230,190,.1)' : 'rgba(0,0,0,.15)'; g.fillRect(0, y, BW, 1.4); }
+    },
+    letters(g, rng) { g.fillStyle = '#D8D0BC'; g.fillRect(0, 0, BW, BH); noise(g, rng, 2500, ['rgba(255,255,255,.12)', 'rgba(0,0,0,.08)']); },
     rubber(g) { const gr = g.createLinearGradient(0, 160, 0, 230); gr.addColorStop(0, '#45454D'); gr.addColorStop(1, '#141418'); g.fillStyle = gr; g.fillRect(0, 0, BW, BH); },
     glass(g) {
       const gr = g.createLinearGradient(0, 90, 0, 135); gr.addColorStop(0, '#D8F0FB'); gr.addColorStop(1, '#8FC3DC');
@@ -538,7 +744,7 @@ body {
       g.fillStyle = 'rgba(255,255,255,.5)'; for (let x = 160; x < 300; x += 60) poly(g, [[x, 90], [x + 10, 90], [x - 14, 135], [x - 24, 135]]);
     },
   };
-  const PRIORITY = ['metal', 'glass', 'body', 'rubber', 'wood', 'iron'];
+  const PRIORITY = ['metal', 'glass', 'letters', 'enamel', 'brass', 'body', 'fabric', 'rubber', 'wood', 'iron'];
 
   function intoMask(c, mask) { px(c.getContext('2d'), () => { const g = c.getContext('2d'); g.globalCompositeOperation = 'destination-in'; g.drawImage(mask, 0, 0); }); return c; }
 
@@ -550,7 +756,7 @@ body {
   const [bleedCv, bleedG] = mk();
   const [sCv, sG] = mk(BW, BH);
   // How thick each kind of material stands up off the mat (in mm-ish units, scaled by HS below).
-  const THICK = { metal: 0.8, iron: 1, body: 1.3, wood: 1.1, rubber: 1.3, glass: 0.6 };
+  const THICK = { metal: 0.8, iron: 1, body: 1.3, wood: 1.1, rubber: 1.3, glass: 0.6, brass: 1.2, enamel: 0.9, fabric: 1.2, letters: 1.1 };
   const ITEM_3D = {
     wrench: { thick: { metal: 0.75 } },
     padlock: { thick: { body: 1.5, metal: 1.2 } },
@@ -560,9 +766,14 @@ body {
     can: { thick: { body: 1.6, metal: 1.0 } },
     pan: { thick: { iron: 1.1 }, dish: [168, 150, 92] },
     hammer: { thick: { metal: 1.3, wood: 1.0 } },
+    toolbox: { thick: { body: 1.7, metal: 1.9 } },
+    watch: { thick: { brass: 1.3, enamel: 1.0, metal: 0.7 } },
+    sign: { thick: { body: 0.9, letters: 1.15, metal: 1.2 } },
+    radio: { thick: { wood: 1.5, fabric: 1.25, glass: 1.3, metal: 1.9 } },
+    skate: { thick: { body: 0.8, metal: 1.5, rubber: 2.0 } },
   };
-  const ROUGH = { metal: 0.36, iron: 0.55, body: 0.85, wood: 0.8, rubber: 0.9, glass: 0.06 };
-  const METAL = { metal: 1, iron: 0.8, body: 0, wood: 0, rubber: 0, glass: 0 };
+  const ROUGH = { metal: 0.36, iron: 0.55, body: 0.85, wood: 0.8, rubber: 0.9, glass: 0.06, brass: 0.3, enamel: 0.25, fabric: 0.95, letters: 0.6 };
+  const METAL = { metal: 1, iron: 0.8, body: 0, wood: 0, rubber: 0, glass: 0, brass: 1, enamel: 0, fabric: 0, letters: 0 };
   const LAYER_ROUGH = { dull: 0.75, grime: 0.95, oldpaint: 0.65, rust: 1, dirt: 1 };
   const LAYER_METAL = { dull: 0.5, grime: 0, oldpaint: 0, rust: 0.05, dirt: 0 };
   const gray = (v) => { const n = Math.round(clamp(v, 0, 1) * 255); return `rgb(${n},${n},${n})`; };
@@ -573,10 +784,10 @@ body {
   }
 
   function buildJob(n) {
-    const item = ITEMS[(n - 1) % ITEMS.length];
-    const cycle = Math.floor((n - 1) / ITEMS.length);
+    const item = itemFor(n);
+    const cycle = Math.floor((n - 1) / JOB_ORDER.length);
     const rng = rngFor(n * 7919 + 11);
-    const J = { n, item, cycle, rng, cfg: ITEM_3D[item.id], masks: {}, layers: {}, reveals: {}, full: {}, stepIdx: 0, finished: false, soaked: false, soakLevel: 0, paintId: null };
+    const J = { n, item, cycle, rng, cfg: ITEM_3D[item.id], masks: {}, layers: {}, reveals: {}, full: {}, extra: {}, stepIdx: 0, finished: false, soaked: false, soakLevel: 0, paintId: null };
     // Region masks: higher-priority regions sit on top and are cut out of lower ones.
     const [occ, og] = mk();
     for (const r of PRIORITY) {
@@ -598,25 +809,37 @@ body {
     J.base = base;
     const has = (layer) => item.steps.some((s) => STEPS[s].layer === layer);
     const union = (names) => { const [c, g] = mk(); names.forEach((nm) => J.masks[nm] && px(g, () => g.drawImage(J.masks[nm], 0, 0))); return c; };
-    const metalish = J.masks.metal ? 'metal' : 'iron';
+    const shiny = J.masks.metal || J.masks.brass ? union(['metal', 'brass']) : J.masks.iron;
     const amount = clamp(item.rust + cycle * 0.08, 0, 0.95);
-    J.layers.rust = makeRust(union(item.rustOn), amount, rng);
+    J.layers.rust = makeRust(union(item.rustOn), amount, rng, item.rustColors);
     if (item.dirt) J.layers.dirt = makeDirt(J.masks.all, item.dirt + cycle * 0.05, rng);
     if (J.masks.body) J.layers.oldpaint = makeOldPaint(J.masks.body, item.body, rng);
-    if (has('dull')) J.layers.dull = makeFlat(J.masks[metalish], 'rgba(120,118,112,.78)', rng);
+    if (has('dull')) J.layers.dull = makeFlat(shiny, 'rgba(120,118,112,.78)', rng);
     if (has('grime')) J.layers.grime = makeGrime(J.masks.wood, rng);
     if (has('paint')) { J.paintId = save.paints.includes(item.paint) ? item.paint : save.paints[0]; J.full.paint = makePaint(J.masks.body, J.paintId, rng); }
     if (has('oil')) J.full.oil = makeOil(J.masks.wood || J.masks.iron, !J.masks.wood);
-    if (has('polish')) J.full.polish = makeShine(J.masks.metal, rng);
+    if (has('polish')) J.full.polish = makeShine(shiny, rng);
+    if (has('letters')) J.full.letters = makeLettering(J.masks.letters);
     for (const k of Object.keys(J.full)) J.reveals[k] = mk()[0];
     J.initial = {};
     for (const [k, c] of Object.entries(J.layers)) J.initial[k] = Math.max(1, countAlpha(c));
     J.regionCount = {};
-    for (const [k, nm] of [['paint', 'body'], ['oil', J.masks.wood ? 'wood' : 'iron'], ['polish', 'metal']]) if (J.full[k]) { J.regionCount[k] = { mask: alphaData(J.masks[nm]) }; }
+    J.revealRegion = { paint: J.masks.body, oil: J.masks.wood || J.masks.iron, polish: shiny, letters: J.masks.letters };
+    for (const k of Object.keys(J.full)) J.regionCount[k] = { mask: alphaData(J.revealRegion[k]) };
     J.screws = (item.screws || []).map(([x, y]) => ({ x, y, state: 'in', rusty: true, t: 0 }));
     J.dents = (item.dents || []).map(([x, y, r]) => ({ x, y, r, hits: 0 }));
     J.part = item.part ? { x: item.part.start[0], y: item.part.start[1], placed: false, oldFall: null } : null;
     J.edgeProgress = 0;
+    // Per-item gimmick state (saved with the job so it can resume)
+    if (item.bits) {
+      J.bits = Array.from({ length: item.bits }, (_, i) => ({
+        x: 80 + rng() * 240, y: i < 10 ? 124 + rng() * 112 : 252 + rng() * 34, kind: ['nail', 'screw', 'washer'][i % 3], rot: rng() * TAU,
+      }));
+      J.extra.collected = J.bits.map(() => false);
+    }
+    if (item.wheels) J.extra.wheels = item.wheels.map(() => ({ a: rng() * TAU, v: 0, turns: 0, freed: false }));
+    if (item.steps.includes('tune')) { J.extra.tune = 0.08; J.extra.target = 0.3 + rng() * 0.55; J.extra.lock = 0; }
+    if (item.crown) { J.extra.minute = 610; J.extra.second = 0; J.extra.wind = 0; }
     J.samples = {};
     for (const k of Object.keys(J.layers)) J.samples[k] = alphaData(J.layers[k]);
     // Material maps that never change during the job
@@ -710,9 +933,9 @@ body {
     }
     return pts;
   }
-  function makeRust(mask, amount, rng) {
+  function makeRust(mask, amount, rng, palette) {
     const [c, g] = mk();
-    const cols = ['#6E280B', '#8E3B13', '#A9501B', '#C46A26', '#D9873A', '#58200A'];
+    const cols = palette || ['#6E280B', '#8E3B13', '#A9501B', '#C46A26', '#D9873A', '#58200A'];
     for (const [x, y] of pointsIn(mask, rng, Math.round(30 + amount * 110))) {
       const k = 3 + Math.floor(rng() * 5), r0 = 6 + rng() * 18 * (0.6 + amount);
       for (let i = 0; i < k; i++) {
@@ -782,6 +1005,12 @@ body {
     g.fillStyle = gr; g.fillRect(0, 0, BW, BH);
     return intoMask(c, mask);
   }
+  function makeLettering(mask) {
+    const [c, g] = mk();
+    const gr = g.createLinearGradient(0, 110, 0, 200); gr.addColorStop(0, '#FFFDF4'); gr.addColorStop(1, '#F1E4C4');
+    g.fillStyle = gr; g.fillRect(0, 0, BW, BH);
+    return intoMask(c, mask);
+  }
   function makeShine(mask, rng) {
     const [c, g] = mk();
     g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(0, 0, BW, BH);
@@ -800,7 +1029,7 @@ body {
     px(g, () => { g.clearRect(0, 0, itemCv.width, itemCv.height); g.drawImage(J.base, 0, 0); });
     const stripStep = J.item.steps.includes('strip');
     if (J.layers.oldpaint && !stripStep) px(g, () => g.drawImage(J.layers.oldpaint, 0, 0));
-    for (const k of ['paint', 'oil', 'polish']) {
+    for (const k of ['paint', 'letters', 'oil', 'polish']) {
       if (!J.full[k]) continue;
       px(tmpG, () => {
         tmpG.clearRect(0, 0, tmpCv.width, tmpCv.height);
@@ -825,6 +1054,17 @@ body {
       if (J.part.placed) P.draw(g, P.target[0], P.target[1]);
       else if (P.drawOld) P.drawOld(g, P.target[0], P.target[1]);
     }
+    // A stencil sheet lies over the sign while its letters are being repainted.
+    if (!J.finished && J.item.steps[J.stepIdx] === 'stencil') {
+      px(tmpG, () => {
+        tmpG.clearRect(0, 0, tmpCv.width, tmpCv.height);
+        tmpG.drawImage(J.masks.body, 0, 0);
+        tmpG.globalCompositeOperation = 'destination-out'; tmpG.drawImage(J.masks.letters, 0, 0);
+        tmpG.globalCompositeOperation = 'source-in'; tmpG.fillStyle = 'rgba(32,36,40,.72)'; tmpG.fillRect(0, 0, tmpCv.width, tmpCv.height);
+        tmpG.globalCompositeOperation = 'source-over';
+      });
+      px(g, () => g.drawImage(tmpCv, 0, 0));
+    }
     // Screws are real 3D parts; only the empty holes are painted on.
     for (const s of J.screws) if (s.state !== 'in') { g.fillStyle = '#1D1F22'; circ(g, s.x, s.y, 3.2); }
     // Bleed edge colors outward so the sides of the 3D shape pick up the right color.
@@ -838,12 +1078,12 @@ body {
   // Roughness, metalness and bump maps follow the restoration: rust is rough and dull, polish is mirror-smooth.
   function updateMaps() {
     const J = job, stripStep = J.item.steps.includes('strip');
-    const revealRough = { paint: 0.3, oil: J.masks.wood ? 0.35 : 0.28, polish: 0.08 };
+    const revealRough = { paint: 0.3, letters: 0.35, oil: J.masks.wood ? 0.35 : 0.28, polish: 0.08 };
     const paintMetal = (PAINTS.find((p) => p.id === J.paintId) || {}).metal ? 1 : 0;
-    const revealMetal = { paint: paintMetal, oil: J.masks.wood ? 0 : 0.45, polish: 1 };
+    const revealMetal = { paint: paintMetal, letters: 0, oil: J.masks.wood ? 0 : 0.45, polish: 1 };
     for (const [g, base, tbl, layerTbl] of [[roughG, J.roughBase, revealRough, LAYER_ROUGH], [metalG, J.metalBase, revealMetal, LAYER_METAL]]) {
       g.clearRect(0, 0, BW, BH); g.drawImage(base, 0, 0);
-      for (const k of ['paint', 'oil', 'polish']) {
+      for (const k of ['paint', 'letters', 'oil', 'polish']) {
         if (!J.full[k]) continue;
         px(sG, () => {
           sG.clearRect(0, 0, BW, BH);
@@ -928,6 +1168,57 @@ body {
       g.fillStyle = '#9FB4BF'; poly(g, [[-22, -10], [22, -10], [16, 14], [-16, 14]]);
       g.fillStyle = '#E8D58A'; poly(g, [[-19, -5], [19, -5], [15, 11], [-15, 11]]);
       g.fillStyle = 'rgba(255,255,255,.7)'; circ(g, -6, 0, 2); circ(g, 4, 4, 1.6); circ(g, 9, -1, 1.2);
+    } else if (tool === 'magnet' || tool === 'supermagnet') {
+      const big = tool === 'supermagnet';
+      g.lineWidth = big ? 12 : 10; g.lineCap = 'butt'; g.strokeStyle = big ? '#3D7BEA' : '#E2483B';
+      g.beginPath(); g.moveTo(-12, -2); g.lineTo(-12, -22); g.arc(0, -22, 12, Math.PI, 0); g.lineTo(12, -2); g.stroke();
+      g.strokeStyle = '#D9DEE3'; g.beginPath(); g.moveTo(-12, 4); g.lineTo(-12, -4); g.moveTo(12, 4); g.lineTo(12, -4); g.stroke();
+      if (big) { g.strokeStyle = '#FFD84D'; g.lineWidth = 2; g.beginPath(); g.moveTo(-20, -30); g.lineTo(-26, -24); g.lineTo(-21, -22); g.lineTo(-27, -15); g.stroke(); }
+    } else if (tool === 'key') {
+      g.fillStyle = '#E5B84B'; circ(g, 0, -26, 9); g.fillStyle = '#9A7020'; circ(g, 0, -26, 4);
+      g.fillStyle = '#E5B84B'; rr(g, -2.5, -18, 5, 20, 2); rr(g, -6, -4, 12, 6, 2);
+    } else if (tool === 'dial') {
+      g.fillStyle = '#C5CCD3'; circ(g, 0, -12, 16); g.fillStyle = '#7D8792'; circ(g, 0, -12, 11);
+      g.strokeStyle = '#E2483B'; g.lineWidth = 3; g.beginPath(); g.moveTo(0, -12); g.lineTo(8, -20); g.stroke();
+    } else if (tool === 'washer') {
+      g.fillStyle = '#FFC531'; rr(g, -9, -34, 18, 26, 5);
+      g.fillStyle = '#2B2B30'; rr(g, -4, -46, 8, 14, 3); rr(g, 6, -26, 8, 14, 3);
+      g.fillStyle = '#C5CCD3'; rr(g, -2, -9, 4, 10, 1);
+      g.fillStyle = 'rgba(150,215,255,.75)'; poly(g, [[-2, 1], [2, 1], [9, 12], [-9, 12]]);
+    } else if (tool === 'drill') {
+      g.fillStyle = '#FF7A35'; rr(g, -20, -40, 34, 15, 5); rr(g, -12, -27, 11, 18, 3);
+      g.fillStyle = '#2B2B30'; rr(g, 12, -37, 7, 9, 2); rr(g, -14, -12, 15, 6, 2);
+      g.fillStyle = '#9AA3AD'; g.fillRect(-2, -10, 4, 6);
+      g.fillStyle = '#C5CCD3'; circ(g, 0, 2, 9);
+      g.strokeStyle = '#7D8792'; g.lineWidth = 1; for (let k = 0; k < 12; k++) { const a = (k / 12) * TAU; g.beginPath(); g.moveTo(Math.cos(a) * 3, 2 + Math.sin(a) * 3); g.lineTo(Math.cos(a) * 9, 2 + Math.sin(a) * 9); g.stroke(); }
+    } else if (tool === 'sander') {
+      g.fillStyle = '#FFC531'; g.beginPath(); g.ellipse(0, -16, 15, 12, 0, 0, TAU); g.fill();
+      g.fillStyle = '#2B2B30'; rr(g, -18, -6, 36, 7, 3);
+      g.fillStyle = '#C9A46E'; rr(g, -18, 0, 36, 4, 2);
+    } else if (tool === 'heatgun') {
+      g.fillStyle = '#FF7A35'; rr(g, -18, -38, 30, 13, 5); rr(g, -12, -27, 10, 18, 3);
+      g.fillStyle = '#7D8792'; rr(g, 10, -36, 12, 9, 2);
+      g.fillStyle = '#C5CCD3'; poly(g, [[-12, -8], [12, -8], [16, 4], [-16, 4]]);
+      g.fillStyle = 'rgba(255,120,40,.55)'; circ(g, 22, -31, 4);
+    } else if (tool === 'spraygun') {
+      g.fillStyle = '#9AA3AD'; rr(g, -14, -30, 26, 11, 4); rr(g, -8, -21, 9, 18, 3);
+      g.fillStyle = extra.color || '#E2483B'; rr(g, -6, -48, 14, 18, 3);
+      g.fillStyle = '#2B2B30'; rr(g, 10, -28, 6, 6, 2);
+    } else if (tool === 'buffer') {
+      g.fillStyle = '#5D6B78'; rr(g, -4, -40, 8, 22, 3);
+      g.fillStyle = '#F4F1EA'; circ(g, 0, -8, 15);
+      g.fillStyle = 'rgba(180,170,150,.5)'; for (let k = 0; k < 10; k++) { const a = (k / 10) * TAU; circ(g, Math.cos(a) * 9, -8 + Math.sin(a) * 9, 2); }
+    } else if (tool === 'tank') {
+      g.fillStyle = '#5D6B78'; rr(g, -22, -16, 44, 28, 4);
+      g.fillStyle = '#E8D58A'; rr(g, -19, -11, 38, 20, 3);
+      g.fillStyle = '#E2483B'; rr(g, -14, -24, 6, 12, 2); g.fillStyle = '#1D1F22'; rr(g, 8, -24, 6, 12, 2);
+    } else if (tool === 'belt') {
+      g.fillStyle = '#3D7BEA'; rr(g, -22, -24, 44, 14, 4);
+      g.fillStyle = '#2B2B30'; rr(g, -22, -10, 44, 10, 5);
+      g.fillStyle = '#C46A26'; rr(g, -20, -2, 40, 4, 2);
+    } else if (tool === 'puller') {
+      g.fillStyle = '#5D6B78'; rr(g, -16, -40, 32, 7, 3); g.fillRect(-2, -34, 4, 20);
+      g.fillStyle = '#FF7A35'; g.beginPath(); g.ellipse(0, -8, 16, 8, 0, Math.PI, 0); g.fill();
     }
     g.restore();
   }
@@ -957,7 +1248,10 @@ body {
       if (ac.state === 'suspended') ac.resume();
     } catch { ac = null; }
   }
-  const TOOL_SOUND = { sponge: [700, 0.07], brush: [3800, 0.13], sandpaper: [2200, 0.12], scraper: [1600, 0.11], spray: [6000, 0.08], cloth: [1300, 0.06], oil: [500, 0.06], stone: [5200, 0.1], tub: [900, 0.06] };
+  const TOOL_SOUND = {
+    sponge: [700, 0.07], brush: [3800, 0.13], sandpaper: [2200, 0.12], scraper: [1600, 0.11], spray: [6000, 0.08], cloth: [1300, 0.06], oil: [500, 0.06], stone: [5200, 0.1], tub: [900, 0.06],
+    washer: [480, 0.12], drill: [3000, 0.15], sander: [1700, 0.13], heatgun: [800, 0.09], spraygun: [5000, 0.1], buffer: [1100, 0.09], belt: [4200, 0.13], tank: [600, 0.07], spin: [1800, 0.1],
+  };
   function setScrub(tool, level) {
     if (!scrub) return;
     const [f, v] = TOOL_SOUND[tool] || [1000, 0];
@@ -988,14 +1282,41 @@ body {
     bubble() { tone(500 + Math.random() * 600, 0.06, 0.03, 0, 'sine'); },
     win() { [0, 4, 7, 12, 16].forEach((s, i) => tone(523 * Math.pow(2, s / 12), 0.25, 0.08, i * 0.08)); },
   };
-  const buzz = (ms) => { try { navigator.vibrate?.(ms); } catch { /* not allowed */ } };
+  const buzz = (ms) => { if (!save.settings.vibe) return; try { navigator.vibrate?.(ms); } catch { /* not allowed */ } };
+  // The radio: static that fades into a little tune as you get close to the station.
+  const radio = {
+    on: false, src: null, gain: null, timer: 0, close: 0, beat: 0,
+    start() {
+      if (this.on || !ac) return;
+      this.on = true;
+      this.src = ac.createBufferSource(); this.src.buffer = noiseBuf; this.src.loop = true;
+      const f = ac.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 2600; f.Q.value = 0.6;
+      this.gain = ac.createGain(); this.gain.gain.value = 0;
+      this.src.connect(f).connect(this.gain).connect(ac.destination); this.src.start();
+      const song = [7, 9, 12, 9, 7, 4, 7, 2, 4, 7, 9, 7, 4, 2, 0, 2];
+      this.timer = setInterval(() => {
+        if (this.close > 0.05) tone(262 * Math.pow(2, song[this.beat % song.length] / 12), 0.22, 0.09 * this.close * this.close, 0, 'triangle');
+        this.beat++;
+      }, 230);
+    },
+    level(close) {
+      this.close = close;
+      if (this.gain) this.gain.gain.setTargetAtTime(save.muted ? 0 : 0.1 * (1 - close), ac.currentTime, 0.05);
+    },
+    stop() {
+      if (!this.on) return;
+      this.on = false; clearInterval(this.timer);
+      try { this.src.stop(); } catch { /* already stopped */ }
+      this.src = this.gain = null;
+    },
+  };
 
   // ---------- 3D scene ----------
   const glCv = $('gl');
   const renderer = new THREE.WebGLRenderer({ canvas: glCv, antialias: true, alpha: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setPixelRatio(save.settings.gfx === 'low' ? 1 : Math.min(window.devicePixelRatio || 1, 2));
   renderer.setClearColor(0x000000, 0);
-  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.enabled = save.settings.gfx !== 'low';
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 100);
@@ -1056,7 +1377,11 @@ body {
   itemTex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
   const [roughCv, roughG] = mk(BW, BH), [metalCv, metalG] = mk(BW, BH), [bumpCv, bumpG] = mk(BW, BH), [alphaCv, alphaG] = mk();
   const roughTex = new THREE.CanvasTexture(roughCv), metalTex = new THREE.CanvasTexture(metalCv), bumpTex = new THREE.CanvasTexture(bumpCv), alphaTex = new THREE.CanvasTexture(alphaCv);
+  // Missed spots glow through the emissive channel, so pulsing them costs nothing per frame.
+  const [hintCv, hintG] = mk(BW, BH);
+  const hintTex = new THREE.CanvasTexture(hintCv);
   const itemMat = new THREE.MeshStandardMaterial({
+    emissive: 0xFFB347, emissiveMap: hintTex, emissiveIntensity: 0,
     map: itemTex, roughnessMap: roughTex, metalnessMap: metalTex, bumpMap: bumpTex, bumpScale: 0.02,
     alphaMap: alphaTex, alphaTest: 0.5, envMap, envMapIntensity: 0.7, roughness: 1, metalness: 1,
   });
@@ -1123,6 +1448,30 @@ body {
   }
   function disposeMesh(m) { if (!m) return; scene.remove(m); m.geometry.dispose(); m.material.map?.dispose(); m.material.dispose(); }
 
+  // Loose nails, screws and washers for the magnet step
+  const BIT_GEO = {
+    nail: new THREE.CylinderGeometry(0.012, 0.012, 0.24, 8).rotateZ(Math.PI / 2),
+    screw: new THREE.CylinderGeometry(0.02, 0.016, 0.12, 10).rotateZ(Math.PI / 2),
+    washer: new THREE.TorusGeometry(0.045, 0.016, 8, 18).rotateX(Math.PI / 2),
+  };
+  const bitMat = new THREE.MeshStandardMaterial({ color: 0x8A5A3A, roughness: 0.65, metalness: 0.6, envMap });
+  const bitMeshes = [];
+  function buildBits() {
+    bitMeshes.forEach((m) => scene.remove(m));
+    bitMeshes.length = 0;
+    if (!job.bits) return;
+    job.bits.forEach((b, i) => {
+      if (job.extra.collected[i]) return;
+      const m = new THREE.Mesh(BIT_GEO[b.kind], bitMat);
+      m.castShadow = true;
+      m.position.copy(designToWorld(b.x, b.y, 0.02));
+      m.rotation.y = b.rot;
+      m.userData = { i, fly: false };
+      scene.add(m);
+      bitMeshes.push(m);
+    });
+  }
+
   function setup3D() {
     const J = job;
     applyHeights();
@@ -1132,7 +1481,8 @@ body {
     buildScrews();
     disposeMesh(partMesh); partMesh = null;
     disposeMesh(oldPartMesh); oldPartMesh = null;
-    if (J.part) {
+    buildBits();
+    if (J.part && !J.part.placed) {
       partMesh = makePartMesh(J.item.part.draw, J.cfg.partSize, J.cfg.glassPart);
       partMesh.position.set(J.part.x / 100 - 2, PART_REST_Y, J.part.y / 100 - 1.5);
     }
@@ -1267,16 +1617,22 @@ body {
   const step = () => STEPS[job.item.steps[job.stepIdx]];
   let stepProgress = 0, advancing = false;
 
-  function startJob(n) {
+  async function startJob(n, rec = null) {
+    radio.stop();
     job = buildJob(n);
+    if (rec) {
+      try { await applySaved(job, rec); } catch { rec = null; job = buildJob(n); }
+    }
     setup3D();
     stepProgress = 0; advancing = false;
     cam.sway = 0; cam.showT = -1;
     pendingCapture = 'before';
+    if (rec && rec.before) { try { job.before = await canvasFromBlob(rec.before); pendingCapture = null; } catch { /* retake it */ } }
     parts.length = 0;
+    if (rec) setTimeout(() => toast('Picked up where you left off'), 300);
     $('jobLabel').textContent = `Job ${n}${job.cycle ? ' · Heavier rust' : ''}`;
     $('itemName').textContent = job.item.name;
-    $('steps').innerHTML = job.item.steps.map((s) => `<img src="${toolIcon(STEPS[s].tool)}" alt="${STEPS[s].label}">`).join('');
+    $('steps').innerHTML = job.item.steps.map((s) => `<img src="${toolIcon(toolFor(STEPS[s].tool))}" alt="${STEPS[s].label}">`).join('');
     $('done').hidden = true;
     enterStep();
   }
@@ -1284,9 +1640,13 @@ body {
   function enterStep() {
     const s = step();
     [...$('steps').children].forEach((el, i) => { el.classList.toggle('done', i < job.stepIdx); el.classList.toggle('now', i === job.stepIdx); });
-    $('toolIcon').src = toolIcon(s.tool);
+    $('toolIcon').src = toolIcon(toolFor(s.tool));
     $('stepLabel').textContent = s.label;
     stepProgress = 0; setBar(0);
+    hintAuto = false; hintUntil = 0; clearHint();
+    $('hintBtn').hidden = s.type !== 'rub';
+    if (s.type === 'tune') { ensureAudio(); radio.start(); } else radio.stop();
+    windLast = null;
     $('swatches').hidden = s.layer !== 'paint';
     if (s.layer === 'paint') renderSwatches();
     if (s.type === 'screws' && !s.out) { job.screws.forEach((sc) => { sc.rusty = false; }); buildScrews(); }
@@ -1304,12 +1664,16 @@ body {
       advancing = false;
       job.stepIdx++;
       if (job.stepIdx >= job.item.steps.length) finishJob();
-      else enterStep();
+      else { enterStep(); composeDirty = true; saveSoon(100); }
     }, 650);
   }
 
   function finishJob() {
     job.finished = true;
+    radio.stop();
+    clearTimeout(saveTimer);
+    IDB.del('job').catch(() => {});
+    clearHint();
     compose(); updateMaps();
     if (job.cfg.light) { lanternGlow.position.copy(designToWorld(job.cfg.light[0], job.cfg.light[1], 0.35)); lanternGlow.intensity = 1.4; }
     const reward = 25 + Math.min(job.n, 20) * 5;
@@ -1354,15 +1718,15 @@ body {
   const TOOL_PARTICLE = { sponge: 'bubble', brush: 'flake', sandpaper: 'dust', scraper: 'chip', spray: 'mist', cloth: 'glint', oil: 'dust' };
   const RADIUS = { sponge: 24, brush: 18, sandpaper: 20, scraper: 18, spray: 26, cloth: 24, oil: 22 };
   function stamp(x, y) {
-    const s = step(), J = job, rad = RADIUS[s.tool] || 20;
+    const s = step(), J = job, u = upg(s.tool) || {}, rad = (RADIUS[s.tool] || 20) * (u.radius || 1), power = u.strength || 1;
     if (s.reveal) {
       const g = J.reveals[s.layer].getContext('2d');
       const gr = g.createRadialGradient(x, y, 0, x, y, rad);
-      gr.addColorStop(0, `rgba(255,255,255,${s.strength})`); gr.addColorStop(1, 'rgba(255,255,255,0)');
+      gr.addColorStop(0, `rgba(255,255,255,${Math.min(1, s.strength * power)})`); gr.addColorStop(1, 'rgba(255,255,255,0)');
       g.fillStyle = gr; circ(g, x, y, rad);
     } else {
       const g = J.layers[s.layer].getContext('2d');
-      const strength = s.strength * (s.layer === 'rust' && J.soaked ? 1.8 : 1);
+      const strength = Math.min(1, s.strength * power * (s.layer === 'rust' && J.soaked ? J.soakBoost || 1.8 : 1));
       g.save(); g.globalCompositeOperation = 'destination-out';
       const gr = g.createRadialGradient(x, y, 0, x, y, rad);
       gr.addColorStop(0, `rgba(0,0,0,${strength})`); gr.addColorStop(0.7, `rgba(0,0,0,${strength * 0.6})`); gr.addColorStop(1, 'rgba(0,0,0,0)');
@@ -1374,11 +1738,11 @@ body {
     if (onItem && Math.random() < 0.55) {
       const type = TOOL_PARTICLE[s.tool];
       let color;
-      if (s.tool === 'spray') color = (PAINTS.find((p) => p.id === J.paintId) || PAINTS[0]).c[0];
+      if (s.tool === 'spray') color = s.layer === 'letters' ? '#FFF8E8' : (PAINTS.find((p) => p.id === J.paintId) || PAINTS[0]).c[0];
       if (s.tool === 'scraper') color = J.item.body;
       if (s.tool === 'oil') color = 'rgba(227,163,59,.7)';
       emit(type, x + (Math.random() - 0.5) * rad, y + (Math.random() - 0.5) * rad, s.tool === 'brush' ? 2 : 1, color);
-      if (s.tool === 'brush' && Math.random() < 0.15) emit('spark', x, y, 2);
+      if (s.tool === 'brush' && Math.random() < (u.id ? 0.4 : 0.15)) emit('spark', x, y, u.id ? 3 : 2);
       if (s.tool === 'sponge' && Math.random() < 0.08) sfx.bubble();
     }
   }
@@ -1412,24 +1776,56 @@ body {
       }
     }
     setBar(stepProgress / 0.94);
+    if (!advancing && save.settings.hints && stepProgress >= 0.8) hintAuto = true;
+    if (hintAuto || performance.now() < hintUntil) updateHint();
   }
+
+  // ---------- Missed spots ----------
+  let hintAuto = false, hintUntil = 0;
+  const SPREAD = [[0, 0], [2, 0], [-2, 0], [0, 2], [0, -2], [3, 3], [-3, -3], [3, -3], [-3, 3]];
+  function clearHint() { hintG.fillStyle = '#000'; hintG.fillRect(0, 0, BW, BH); hintTex.needsUpdate = true; }
+  function updateHint() {
+    const s = job && !job.finished && step();
+    if (!s || s.type !== 'rub') return clearHint();
+    px(sG, () => {
+      sG.clearRect(0, 0, BW, BH);
+      if (s.reveal) {
+        sG.drawImage(job.revealRegion[s.layer], 0, 0, BW, BH);
+        sG.globalCompositeOperation = 'destination-out'; sG.drawImage(job.reveals[s.layer], 0, 0, BW, BH);
+      } else sG.drawImage(job.layers[s.layer], 0, 0, BW, BH);
+      sG.globalCompositeOperation = 'source-in'; sG.fillStyle = '#fff'; sG.fillRect(0, 0, BW, BH);
+    });
+    hintG.fillStyle = '#000'; hintG.fillRect(0, 0, BW, BH);
+    // Spread tiny specks out a little so they are easy to spot.
+    for (const [dx, dy] of SPREAD) hintG.drawImage(sCv, dx, dy);
+    hintTex.needsUpdate = true;
+  }
+  $('hintBtn').addEventListener('click', (e) => {
+    e.currentTarget.blur();
+    if (!job || job.finished) return;
+    hintUntil = performance.now() + 2600;
+    updateHint();
+    tone(1320, 0.12, 0.05, 0, 'sine');
+  });
 
   // ---------- Input ----------
   let pointer = null;   // { x, y, p } spot on the item while pressing
   let hover = null, holding = false, dragPart = null, hammerAnim = null, scrubLevel = 0;
-  const TOUCH_LIFT = 46;
-  const liftedPick = (e) => pickSurface(e.clientX, e.clientY - (e.pointerType === 'touch' ? TOUCH_LIFT : 0));
+  let windLast = null, tuneX = null;
+  const liftedPick = (e) => pickSurface(e.clientX, e.clientY - (e.pointerType === 'touch' ? save.settings.lift : 0));
   window.addEventListener('pointerdown', (e) => {
     if (e.button > 0 || (e.target.closest && e.target.closest('button, .sheet, .tray-card'))) return;
     ensureAudio();
     if (!job || job.finished || advancing) return;
     const s = step();
-    if (s.type === 'rub' || s.type === 'sharpen') {
+    if (['rub', 'sharpen', 'magnet', 'wind', 'spin'].includes(s.type)) {
       const pt = liftedPick(e);
       if (!pt) return;
       pointer = pt;
       if (s.type === 'rub') stamp(pt.x, pt.y);
-    } else if (s.type === 'soak') holding = true;
+      if (s.type === 'wind') windMove(pt);
+    } else if (s.type === 'tune') { tuneX = e.clientX; holding = true; }
+    else if (s.type === 'soak') holding = true;
     else if (s.type === 'screws') { const pt = pickSurface(e.clientX, e.clientY); if (pt) tapScrew(pt.x, pt.y, s.out); }
     else if (s.type === 'dents') { const pt = pickSurface(e.clientX, e.clientY); hammerAnim = { sx: e.clientX, sy: e.clientY, t: 0 }; if (pt) tapDent(pt.x, pt.y); }
     else if (s.type === 'part') {
@@ -1446,6 +1842,7 @@ body {
     hover = e.pointerType === 'mouse' ? liftedPick(e) : null;
     const s = step();
     if (dragPart) { const pt = pickPlane(e.clientX, e.clientY, PART_LIFT_Y); job.part.x = pt.x + dragPart.dx; job.part.y = pt.y + dragPart.dy; dragPart.cx = e.clientX; dragPart.cy = e.clientY; return; }
+    if (s && s.type === 'tune' && tuneX != null) { tuneMove(e.clientX - tuneX); tuneX = e.clientX; return; }
     if (!pointer || !s) return;
     const pt = liftedPick(e);
     if (!pt) return;
@@ -1455,10 +1852,14 @@ body {
       for (let i = 1; i <= n; i++) stamp(pointer.x + (dx * i) / n, pointer.y + (dy * i) / n);
       scrubLevel = clamp(dist / 14, 0.2, 1);
     } else if (s.type === 'sharpen') sharpenMove(pointer.x, pointer.y, pt.x, pt.y);
+    else if (s.type === 'wind') windMove(pt);
+    else if (s.type === 'spin') spinMove(pt, dist);
     pointer = pt;
   });
   const release = () => {
-    pointer = null; holding = false;
+    if (pointer || holding) saveSoon();
+    if (pointer && job && !job.finished && !advancing && step().type === 'rub') checkProgress();
+    pointer = null; holding = false; tuneX = null; windLast = null;
     if (dragPart) {
       // The part floats under the finger, so drop it where the finger is pointing on the item.
       const P = job.item.part, under = dragPart.cx != null ? pickSurface(dragPart.cx, dragPart.cy) : null;
@@ -1479,23 +1880,22 @@ body {
     composeDirty = true;
   }
   function tapDent(x, y) {
-    const d = job.dents.find((d) => d.hits < 3 && Math.hypot(d.x - x, d.y - y) < d.r + 10);
+    const need = dentTaps();
+    const d = job.dents.find((d) => d.hits < need && Math.hypot(d.x - x, d.y - y) < d.r + 10);
     if (!d) { burst(0.05, 800, 0.04); return; }
     d.hits++;
     sfx.clank(); buzz(25);
     emit('spark', d.x, d.y, 4);
     applyHeights();
-    if (d.hits >= 3) setTimeout(sfx.ding, 120);
-    const left = job.dents.filter((v) => v.hits < 3).length;
+    if (d.hits >= need) setTimeout(sfx.ding, 120);
+    saveSoon();
+    const left = job.dents.filter((v) => v.hits < need).length;
     stepProgress = 1 - left / job.dents.length; setBar(stepProgress);
     if (!left) completeStep();
   }
   function placePart() {
     const J = job, P = J.item.part;
-    J.part.placed = true; J.part.x = P.target[0]; J.part.y = P.target[1];
-    const [c, g] = mk(); P.draw(g, P.target[0], P.target[1]);
-    const p = pillow(maskFloat(c), 4);
-    J.partH = p.map((v) => v * J.cfg.part);
+    markPartPlaced(J);
     applyHeights();
     disposeMesh(partMesh); partMesh = null;
     if (P.drawOld) {
@@ -1507,7 +1907,14 @@ body {
     updateAlpha();
     sfx.snap(); buzz(20);
     composeDirty = true;
+    saveSoon();
     completeStep();
+  }
+  function markPartPlaced(J) {
+    const P = J.item.part;
+    J.part.placed = true; J.part.x = P.target[0]; J.part.y = P.target[1];
+    const [c, g] = mk(); P.draw(g, P.target[0], P.target[1]);
+    J.partH = pillow(maskFloat(c), 4).map((v) => v * J.cfg.part);
   }
   function sharpenMove(x0, y0, x1, y1) {
     const [ex0, ey0, ex1, ey1] = job.item.edge;
@@ -1516,12 +1923,68 @@ body {
     const t1 = (x1 - ex0) * nx + (y1 - ey0) * ny, d1 = Math.abs((x1 - ex0) * -ny + (y1 - ey0) * nx);
     if (t1 < -20 || t1 > len + 20 || d1 > 34) { scrubLevel = 0; return; }
     const along = Math.abs((x1 - x0) * nx + (y1 - y0) * ny);
-    job.edgeProgress = clamp(job.edgeProgress + along / (len * 6), 0, 1);
+    job.edgeProgress = clamp(job.edgeProgress + along / ((len * 6) / ((upg('stone') || {}).speed || 1)), 0, 1);
     scrubLevel = clamp(along / 10, 0.2, 1);
     if (Math.random() < 0.5) emit('spark', ex0 + nx * t1, ey0 + ny * t1, 2);
     composeDirty = true;
     stepProgress = job.edgeProgress; setBar(stepProgress);
     if (job.edgeProgress >= 1) completeStep();
+  }
+
+  // Pocket watch: circle around the crown to wind the spring.
+  const WIND_TURNS = 4;
+  function windMove(pt) {
+    const [cx, cy] = job.item.crown, d = Math.hypot(pt.x - cx, pt.y - cy);
+    if (d > 110 || d < 6) { windLast = null; return; }
+    const a = Math.atan2(pt.y - cy, pt.x - cx);
+    if (windLast != null) {
+      const da = Math.abs(((a - windLast + Math.PI * 3) % TAU) - Math.PI);
+      if (da < 1.3) {
+        const before = Math.floor(job.extra.wind / 0.4);
+        job.extra.wind += da;
+        if (Math.floor(job.extra.wind / 0.4) > before) { burst(0.1, 4200, 0.012); tone(3200, 0.02, 0.03, 0, 'square'); buzz(4); job.extra.minute += 3; composeDirty = true; }
+        scrubLevel = 0;
+        stepProgress = job.extra.wind / (WIND_TURNS * TAU); setBar(stepProgress);
+        if (stepProgress >= 1) { job.extra.wound = true; completeStep(); }
+      }
+    }
+    windLast = a;
+  }
+  // Radio: slide the needle until the static turns into music, then hold it there.
+  function tuneMove(dxPx) {
+    job.extra.tune = clamp(job.extra.tune + dxPx / (W * 1.4), 0, 1);
+    composeDirty = true;
+  }
+  // Skateboard: flick across a wheel to spin it; rusty bearings slow it down until they free up.
+  function spinMove(pt, dist) {
+    job.item.wheels.forEach(([x, y], i) => {
+      if (Math.hypot(pt.x - x, pt.y - y) > 36) return;
+      const w = job.extra.wheels[i];
+      w.v = Math.min(w.freed ? 60 : 34, w.v + dist * 0.9);
+      if (!w.freed && Math.random() < 0.3) tone(700 + Math.random() * 500, 0.06, 0.03, 0, 'sawtooth');
+    });
+  }
+
+  // Toolbox: loose bits near the magnet jump to it and get collected.
+  function magnetPull(dt) {
+    const reach = 46 * ((upg('magnet') || {}).radius || 1);
+    const target = pointer ? pointer.p.clone().setY(pointer.p.y + 0.35) : null;
+    for (let k = bitMeshes.length - 1; k >= 0; k--) {
+      const m = bitMeshes[k], b = job.bits[m.userData.i];
+      if (!m.userData.fly && target && Math.hypot(pointer.x - b.x, pointer.y - b.y) < reach) { m.userData.fly = true; tone(1400 + Math.random() * 600, 0.04, 0.03, 0, 'square'); }
+      if (!m.userData.fly) continue;
+      if (!target) { m.userData.fly = false; m.position.y = Math.max(m.position.y - dt * 2, designToWorld(b.x, b.y, 0.02).y); continue; }
+      m.position.lerp(target, 1 - Math.exp(-dt * 12));
+      m.rotation.x += dt * 9;
+      if (m.position.distanceTo(target) < 0.07) {
+        job.extra.collected[m.userData.i] = true;
+        scene.remove(m); bitMeshes.splice(k, 1);
+        burst(0.12, 5000, 0.03); tone(2400 + Math.random() * 800, 0.05, 0.04, 0, 'triangle'); buzz(6);
+      }
+    }
+    const got = job.extra.collected.filter(Boolean).length;
+    stepProgress = got / job.extra.collected.length; setBar(stepProgress);
+    if (got === job.extra.collected.length) { saveSoon(); completeStep(); }
   }
 
   // ---------- Overlay (tools, sparks, hints) ----------
@@ -1539,17 +2002,26 @@ body {
       }
       ctx.stroke(); ctx.restore();
     }
+    if (st && st.type === 'wind') {
+      const [cx, cy] = job.item.crown, hy = sampleH(job.H, cx, cy) * HS + 0.02;
+      ctx.save(); ctx.setLineDash([5, 6]); ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 2; ctx.beginPath();
+      for (let k = 0; k <= 48; k++) {
+        const a = (k / 48) * TAU + performance.now() / 900, [sx, sy] = toScreen(new THREE.Vector3((cx + Math.cos(a) * 46) / 100 - 2, hy, (cy + Math.sin(a) * 46) / 100 - 1.5));
+        k ? ctx.lineTo(sx, sy) : ctx.moveTo(sx, sy);
+      }
+      ctx.stroke(); ctx.restore();
+    }
     drawParts();
     if (hammerAnim) {
       const h = hammerAnim, sw = h.t < 0.1 ? -0.9 + h.t * 9 : 0;
-      drawTool(ctx, 'hammer', h.sx + 18, h.sy - (TOUCH_LIFT / 2), 1.2, { swing: sw });
+      drawTool(ctx, toolFor('hammer') === 'puller' ? 'puller' : 'hammer', h.sx + 18, h.sy - (save.settings.lift / 2), 1.2, { swing: sw });
     }
     const tp = pointer || hover;
-    if (tp && st && ['rub', 'sharpen'].includes(st.type)) {
-      const color = st.tool === 'spray' ? (PAINTS.find((p) => p.id === job.paintId) || PAINTS[0]).c[0] : undefined;
-      const wob = pointer ? Math.sin(now / 40) * 2 : 0;
+    if (tp && st && ['rub', 'sharpen', 'magnet', 'wind', 'spin'].includes(st.type)) {
+      const color = st.tool === 'spray' ? (st.layer === 'letters' ? '#FFF8E8' : (PAINTS.find((p) => p.id === job.paintId) || PAINTS[0]).c[0]) : undefined;
+      const wob = pointer && st.type === 'rub' ? Math.sin(now / 40) * 2 : 0;
       const [sx, sy] = toScreen(tp.p);
-      drawTool(ctx, st.tool, sx + wob, sy, 1.15, { color });
+      drawTool(ctx, toolFor(st.tool), sx + wob, sy, 1.15, { color });
     }
   }
 
@@ -1562,12 +2034,13 @@ body {
       const s = step();
       if (s && s.type === 'soak' && !advancing) {
         if (holding) {
-          job.soakLevel = Math.min(1, job.soakLevel + dt * 0.45);
+          job.soakLevel = Math.min(1, job.soakLevel + dt * 0.45 * ((upg('tub') || {}).speed || 1));
           if (Math.random() < 0.5) emit('bubble', 20 + Math.random() * 360, 20 + Math.random() * 260, 1);
           if (Math.random() < 0.06) sfx.bubble();
           stepProgress = job.soakLevel; setBar(stepProgress);
           if (job.soakLevel >= 1) {
             job.soaked = true;
+            job.soakBoost = upg('tub') ? 2.3 : 1.8;
             // Vinegar loosens the rust: it turns lighter and comes off faster.
             const g = job.layers.rust.getContext('2d');
             px(g, () => { g.globalCompositeOperation = 'source-atop'; g.fillStyle = 'rgba(230,140,70,.28)'; g.fillRect(0, 0, 9999, 9999); });
@@ -1577,7 +2050,36 @@ body {
         }
       } else if (job.soakLevel > 0) job.soakLevel = Math.max(0, job.soakLevel - dt * 0.9);
       if (s && s.type === 'rub' && pointer && now - lastCheck > 140) { lastCheck = now; checkProgress(); }
-      setScrub(s ? s.tool : '', (pointer && s && (s.type === 'rub' || s.type === 'sharpen')) ? scrubLevel : holding ? 0.5 : 0);
+      // Gimmick steps
+      if (s && s.type === 'magnet' && !advancing) magnetPull(dt);
+      if (s && s.type === 'tune' && !advancing) {
+        const off = Math.abs(job.extra.tune - job.extra.target), close = Math.max(0, 1 - off / 0.14);
+        radio.level(close);
+        job.extra.lock = off < 0.022 ? job.extra.lock + dt : 0;
+        stepProgress = Math.min(1, close * 0.75 + (job.extra.lock / 1.1) * 0.25); setBar(stepProgress);
+        if (job.extra.lock >= 1.1) { radio.level(1); completeStep(); }
+      }
+      let whirr = 0;
+      if (job.extra.wheels) {
+        let spinning = false;
+        job.extra.wheels.forEach((w) => {
+          if (w.v < 0.02) { w.v = 0; return; }
+          spinning = true;
+          w.a += w.v * dt * 0.6;
+          w.turns += (w.v * dt * 0.6) / TAU;
+          w.v *= Math.exp(-dt * (w.freed ? 0.5 : 2.6));
+          whirr += w.v;
+          if (!w.freed && w.turns > 5) { w.freed = true; sfx.ding(); buzz(15); toast('Spins free!'); saveSoon(); }
+        });
+        if (spinning) composeDirty = true;
+        if (s && s.type === 'spin' && !advancing) {
+          const freed = job.extra.wheels.filter((w) => w.freed).length;
+          stepProgress = freed / job.extra.wheels.length; setBar(stepProgress);
+          if (freed === job.extra.wheels.length) completeStep();
+        }
+      }
+      if (whirr > 0.3) setScrub('spin', clamp(whirr / 60, 0.1, 1));
+      else setScrub(s ? toolFor(s.tool) : '', (pointer && s && (s.type === 'rub' || s.type === 'sharpen')) ? scrubLevel : holding && s && s.type === 'soak' ? 0.5 : 0);
       if (!pointer) scrubLevel *= Math.exp(-dt * 10);
       // Screws spin out and lift away, or spin back down into their holes.
       let moving = false;
@@ -1588,7 +2090,8 @@ body {
           sc.spin = (sc.spin || 0) + dt * 18;
           sc.t += (sc.dir === 'out' ? 1 : -1) * dt * 2.2;
           if (sc.dir === 'out' && sc.t >= 1) sc.state = 'out';
-          if (sc.dir === 'in' && sc.t <= 0) { sc.state = 'in'; sc.t = 0; sfx.snap(); composeDirty = true; }
+          if (sc.dir === 'in' && sc.t <= 0) { sc.state = 'in'; sc.t = 0; sfx.snap(); composeDirty = true; saveSoon(); }
+          if (sc.dir === 'out' && sc.state === 'out') saveSoon();
         }
         m.visible = sc.state !== 'out';
         m.position.y = m.userData.baseY + sc.t * 0.35;
@@ -1618,9 +2121,15 @@ body {
       }
     }
     if (hammerAnim) { hammerAnim.t += dt; if (hammerAnim.t > 0.25) hammerAnim = null; }
+    // A restored pocket watch keeps ticking.
+    if (job && job.finished && job.extra.wound) {
+      job.extra.tickT = (job.extra.tickT || 0) + dt;
+      if (job.extra.tickT >= 1) { job.extra.tickT -= 1; job.extra.second = (job.extra.second + 1) % 60; job.extra.minute += 1 / 60; composeDirty = true; tone(4200, 0.015, 0.012, 0, 'square'); }
+    }
+    itemMat.emissiveIntensity = job && (hintAuto || now < hintUntil) ? 0.22 + 0.32 * (0.5 + 0.5 * Math.sin(now / 150)) : 0;
     updateParts(dt);
     // Camera: a slow sway while idle, a showcase swing when the job is done.
-    const busy = pointer || dragPart || holding;
+    const busy = pointer || dragPart || holding || (job && job.extra.wheels && job.extra.wheels.some((w) => w.v > 1));
     cam.sway += ((busy ? 0 : 1) - cam.sway) * (1 - Math.exp(-dt * (busy ? 6 : 0.8)));
     cam.az = 0.07 * Math.sin(now / 2200) * cam.sway;
     if (cam.showT >= 0) {
@@ -1644,6 +2153,115 @@ body {
     requestAnimationFrame(frame);
   }
 
+  // ---------- Resume mid-job ----------
+  const IDB = {
+    db: null,
+    open() {
+      return this.db || (this.db = new Promise((res, rej) => {
+        const r = indexedDB.open('rust-to-shine', 1);
+        r.onupgradeneeded = () => r.result.createObjectStore('kv');
+        r.onsuccess = () => res(r.result);
+        r.onerror = () => rej(r.error);
+      }));
+    },
+    async run(mode, fn) {
+      const db = await this.open();
+      return new Promise((res, rej) => {
+        const t = db.transaction('kv', mode), req = fn(t.objectStore('kv'));
+        t.oncomplete = () => res(req && req.result);
+        t.onerror = t.onabort = () => rej(t.error);
+      });
+    },
+    get(k) { return this.run('readonly', (st) => st.get(k)); },
+    put(k, v) { return this.run('readwrite', (st) => st.put(v, k)); },
+    del(k) { return this.run('readwrite', (st) => st.delete(k)); },
+  };
+  const toBlob = (c) => new Promise((res) => c.toBlob(res, 'image/png'));
+  async function canvasFromBlob(blob) {
+    const img = await createImageBitmap(blob), c = document.createElement('canvas');
+    c.width = img.width; c.height = img.height; c.getContext('2d').drawImage(img, 0, 0);
+    return c;
+  }
+  async function blobInto(canvas, blob) {
+    const img = await createImageBitmap(blob), g = canvas.getContext('2d');
+    px(g, () => { g.clearRect(0, 0, canvas.width, canvas.height); g.drawImage(img, 0, 0); });
+  }
+  let saveTimer = 0, saving = false;
+  function saveSoon(ms = 1200) { clearTimeout(saveTimer); saveTimer = setTimeout(saveNow, ms); }
+  async function saveNow() {
+    const J = job;
+    if (!J || J.finished || !J.before || saving) return;
+    saving = true;
+    try {
+      const rec = {
+        v: 1, n: J.n, id: J.item.id, stepIdx: J.stepIdx, soaked: J.soaked, soakBoost: J.soakBoost, paintId: J.paintId, edgeProgress: J.edgeProgress,
+        screws: J.screws.map((sc) => (sc.state === 'moving' ? sc.dir : sc.state)), rusty: J.screws.map((sc) => sc.rusty),
+        dents: J.dents.map((d) => d.hits), partPlaced: !!(J.part && J.part.placed),
+        extra: JSON.parse(JSON.stringify(J.extra)), layers: {}, reveals: {}, before: await toBlob(J.before),
+      };
+      for (const [k, c] of Object.entries(J.layers)) rec.layers[k] = await toBlob(c);
+      for (const [k, c] of Object.entries(J.reveals)) rec.reveals[k] = await toBlob(c);
+      if (job === J && !J.finished) await IDB.put('job', rec);
+    } catch { /* storage unavailable: the job just won't resume */ }
+    saving = false;
+  }
+  async function loadSaved(n) {
+    try {
+      const rec = await IDB.get('job');
+      if (rec && rec.v === 1 && rec.n === n && rec.id === itemFor(n).id) return rec;
+    } catch { /* no saved job */ }
+    return null;
+  }
+  async function applySaved(J, rec) {
+    for (const [k, b] of Object.entries(rec.layers || {})) if (J.layers[k]) await blobInto(J.layers[k], b);
+    for (const [k, b] of Object.entries(rec.reveals || {})) if (J.reveals[k]) await blobInto(J.reveals[k], b);
+    J.stepIdx = clamp(rec.stepIdx | 0, 0, J.item.steps.length - 1);
+    J.soaked = !!rec.soaked; J.soakBoost = rec.soakBoost; J.edgeProgress = rec.edgeProgress || 0;
+    if (rec.paintId && J.full.paint) { J.paintId = rec.paintId; J.full.paint = makePaint(J.masks.body, J.paintId, rngFor(J.n)); }
+    (rec.screws || []).forEach((st, i) => { const sc = J.screws[i]; if (sc) { sc.state = st; sc.t = st === 'out' ? 1 : 0; sc.rusty = rec.rusty ? rec.rusty[i] : true; } });
+    (rec.dents || []).forEach((h, i) => { if (J.dents[i]) J.dents[i].hits = h; });
+    if (rec.partPlaced && J.part) markPartPlaced(J);
+    Object.assign(J.extra, rec.extra || {});
+    if (J.extra.wheels) J.extra.wheels.forEach((w) => { w.v = 0; });
+    for (const k of Object.keys(J.layers)) J.samples[k] = alphaData(J.layers[k]);
+  }
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') { clearTimeout(saveTimer); saveNow(); } });
+
+  // ---------- Settings ----------
+  function renderSettings() {
+    const st = save.settings;
+    for (const [id, on] of [['setSound', !save.muted], ['setVibe', st.vibe], ['setHints', st.hints]]) {
+      $(id).setAttribute('aria-pressed', String(on)); $(id).textContent = on ? 'On' : 'Off';
+    }
+    $('setLift').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(+b.dataset.v === st.lift)));
+    $('setGfx').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v === st.gfx)));
+  }
+  function applyGfx() {
+    const low = save.settings.gfx === 'low';
+    renderer.setPixelRatio(low ? 1 : Math.min(window.devicePixelRatio || 1, 2));
+    renderer.shadowMap.enabled = !low;
+    scene.traverse((o) => { if (o.material) o.material.needsUpdate = true; });
+    layout();
+  }
+  let resetArmed = 0;
+  $('settingsBtn').addEventListener('click', (e) => { e.currentTarget.blur(); ensureAudio(); renderSettings(); $('settings').hidden = false; resetArmed = 0; $('resetBtn').textContent = 'Reset all progress'; });
+  $('settingsDone').addEventListener('click', (e) => { e.currentTarget.blur(); $('settings').hidden = true; });
+  $('setSound').addEventListener('click', () => { save.muted = !save.muted; persist(); renderSettings(); if (!save.muted) tone(880, 0.08, 0.06); });
+  $('setVibe').addEventListener('click', () => { save.settings.vibe = !save.settings.vibe; persist(); renderSettings(); buzz(20); });
+  $('setHints').addEventListener('click', () => { save.settings.hints = !save.settings.hints; persist(); renderSettings(); });
+  $('setLift').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; save.settings.lift = +b.dataset.v; persist(); renderSettings(); });
+  $('setGfx').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; save.settings.gfx = b.dataset.v; persist(); renderSettings(); applyGfx(); });
+  $('resetBtn').addEventListener('click', async () => {
+    if (performance.now() - resetArmed > 4000) {
+      resetArmed = performance.now();
+      $('resetBtn').textContent = 'Tap again to erase coins, paints, tools and jobs';
+      return;
+    }
+    try { localStorage.removeItem(SAVE_KEY); } catch { /* storage unavailable */ }
+    await IDB.del('job').catch(() => {});
+    location.reload();
+  });
+
   // ---------- Paint picker & shop ----------
   function renderSwatches() {
     $('swatches').innerHTML = PAINTS.filter((p) => save.paints.includes(p.id))
@@ -1655,23 +2273,36 @@ body {
     job.paintId = b.dataset.id;
     job.full.paint = makePaint(job.masks.body, job.paintId, rngFor(job.n));
     composeDirty = true;
+    saveSoon();
     renderSwatches();
     tone(880, 0.06, 0.05);
   });
-  let shopFrom = null;
+  let shopFrom = null, shopTab = 'paints';
+  const SHOP_MSG = { paints: 'Colors you own show up whenever a job needs paint.', tools: 'Power tools replace your hand tools as soon as you buy them.' };
   function renderShop() {
     $('shopCoins').textContent = save.coins.toLocaleString();
-    $('shopGrid').innerHTML = PAINTS.map((p) => {
-      const own = save.paints.includes(p.id);
-      return `<button class="item${own ? ' owned' : ''}${!own && save.coins < p.price ? ' locked' : ''}" type="button" data-id="${p.id}"><i class="chip" style="background:linear-gradient(160deg, ${p.c[0]}, ${p.c[1]})"></i><b>${p.name}</b><span>${own ? 'Owned' : `<i class="coin"></i>${p.price}`}</span></button>`;
-    }).join('');
+    $('tabPaints').setAttribute('aria-selected', String(shopTab === 'paints'));
+    $('tabTools').setAttribute('aria-selected', String(shopTab === 'tools'));
+    $('shopGrid').classList.toggle('tools', shopTab === 'tools');
+    $('shopGrid').innerHTML = shopTab === 'paints'
+      ? PAINTS.map((p) => {
+        const own = save.paints.includes(p.id);
+        return `<button class="item${own ? ' owned' : ''}${!own && save.coins < p.price ? ' locked' : ''}" type="button" data-id="${p.id}"><i class="chip" style="background:linear-gradient(160deg, ${p.c[0]}, ${p.c[1]})"></i><b>${p.name}</b><span>${own ? 'Owned' : `<i class="coin"></i>${p.price}`}</span></button>`;
+      }).join('')
+      : UPGRADES.map((u) => {
+        const own = save.tools.includes(u.id);
+        return `<button class="item${own ? ' owned' : ''}${!own && save.coins < u.price ? ' locked' : ''}" type="button" data-up="${u.id}"><img src="${toolIcon(u.id)}" alt=""><b>${u.name}</b><small>${u.desc}</small><span>${own ? 'Owned' : `<i class="coin"></i>${u.price}`}</span></button>`;
+      }).join('');
   }
-  function openShop() { shopFrom = $('done').hidden ? null : 'done'; $('done').hidden = true; $('shop').hidden = false; $('shopMsg').textContent = 'Colors you own show up whenever a job needs paint.'; renderShop(); }
+  function openShop() { shopFrom = $('done').hidden ? null : 'done'; $('done').hidden = true; $('shop').hidden = false; $('shopMsg').textContent = SHOP_MSG[shopTab]; renderShop(); }
+  $('tabPaints').addEventListener('click', () => { shopTab = 'paints'; $('shopMsg').textContent = SHOP_MSG.paints; renderShop(); });
+  $('tabTools').addEventListener('click', () => { shopTab = 'tools'; $('shopMsg').textContent = SHOP_MSG.tools; renderShop(); });
   function closeShop() { $('shop').hidden = true; if (shopFrom) $(shopFrom).hidden = false; if (job && step() && step().layer === 'paint') renderSwatches(); }
   $('shopGrid').addEventListener('click', (e) => {
     const el = e.target.closest('.item');
     if (!el) return;
     ensureAudio();
+    if (el.dataset.up) return buyTool(el);
     const p = PAINTS.find((x) => x.id === el.dataset.id);
     if (save.paints.includes(p.id)) { $('shopMsg').textContent = `You already own ${p.name}.`; return; }
     if (save.coins < p.price) {
@@ -1685,17 +2316,33 @@ body {
     [0, 4, 7].forEach((s, i) => tone(660 * Math.pow(2, s / 12), 0.14, 0.08, i * 0.06));
     renderShop();
   });
+  function buyTool(el) {
+    const u = UPGRADES.find((x) => x.id === el.dataset.up);
+    if (save.tools.includes(u.id)) { $('shopMsg').textContent = `You already own the ${u.name}.`; return; }
+    if (save.coins < u.price) {
+      $('shopMsg').textContent = `You need ${u.price - save.coins} more coins for the ${u.name}.`;
+      el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake');
+      return;
+    }
+    save.coins -= u.price; save.tools.push(u.id); persist();
+    $('coins').textContent = save.coins.toLocaleString();
+    $('shopMsg').textContent = `The ${u.name} is on your bench!`;
+    [0, 4, 7, 12].forEach((st, i) => tone(523 * Math.pow(2, st / 12), 0.14, 0.08, i * 0.06));
+    if (job) {
+      [...$('steps').children].forEach((img, i) => { img.src = toolIcon(toolFor(STEPS[job.item.steps[i]].tool)); });
+      if (!job.finished) $('toolIcon').src = toolIcon(toolFor(step().tool));
+    }
+    renderShop();
+  }
   $('shopBtn').addEventListener('click', (e) => { e.currentTarget.blur(); ensureAudio(); openShop(); });
   $('shopBtn2').addEventListener('click', (e) => { e.currentTarget.blur(); openShop(); });
   $('shopDone').addEventListener('click', (e) => { e.currentTarget.blur(); closeShop(); });
   $('nextBtn').addEventListener('click', (e) => { e.currentTarget.blur(); ensureAudio(); startJob(save.level); });
-  window.addEventListener('keydown', (e) => { if (e.code === 'Escape' && !$('shop').hidden) closeShop(); });
-  function renderMute() {
-    $('icoOn').hidden = save.muted; $('icoOff').hidden = !save.muted;
-    $('mute').setAttribute('aria-pressed', String(save.muted));
-    $('mute').setAttribute('aria-label', save.muted ? 'Turn sound on' : 'Mute sound');
-  }
-  $('mute').addEventListener('click', (e) => { e.currentTarget.blur(); ensureAudio(); save.muted = !save.muted; persist(); renderMute(); });
+  window.addEventListener('keydown', (e) => {
+    if (e.code !== 'Escape') return;
+    if (!$('shop').hidden) closeShop();
+    if (!$('settings').hidden) $('settings').hidden = true;
+  });
   window.addEventListener('resize', layout);
 
   if (window.__RTS_TEST__) {
@@ -1710,11 +2357,16 @@ body {
           if (s.layer && s.reveal) { const g = job.reveals[s.layer].getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, BW, BH); }
           else if (s.layer) { const g = job.layers[s.layer].getContext('2d'); px(g, () => g.clearRect(0, 0, 9999, 9999)); }
           if (s.type === 'screws') job.screws.forEach((sc) => { sc.state = s.out ? 'out' : 'in'; });
-          if (s.type === 'dents') job.dents.forEach((d) => { d.hits = 3; });
+          if (s.type === 'dents') job.dents.forEach((d) => { d.hits = dentTaps(); });
+          if (s.type === 'magnet') { job.extra.collected = job.extra.collected.map(() => true); buildBits(); }
+          if (s.type === 'wind') job.extra.wound = true;
+          if (s.type === 'spin') job.extra.wheels.forEach((w) => { w.freed = true; });
+          if (s.type === 'part' && !job.part.placed) { markPartPlaced(job); disposeMesh(partMesh); partMesh = null; updateAlpha(); }
         }
         job.stepIdx = i; composeDirty = true; applyHeights(); enterStep();
       },
       complete() { completeStep(); },
+      saveNow, loadSaved, get save() { return save; }, startJob,
     };
   }
 
@@ -1723,11 +2375,11 @@ body {
   function start() {
     if (booted) return;
     booted = true;
-    renderMute();
     $('coins').textContent = save.coins.toLocaleString();
+    clearHint();
     layout();
-    startJob(save.level);
     requestAnimationFrame(frame);
+    loadSaved(save.level).then((rec) => startJob(save.level, rec));
   }
   window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
 })();

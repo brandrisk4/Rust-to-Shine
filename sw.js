@@ -1,6 +1,6 @@
 // Rust to Shine offline cache. Bump VERSION whenever any file changes.
 const PREFIX = 'rust-to-shine-';
-const VERSION = PREFIX + 'v2';
+const VERSION = PREFIX + 'v3';
 const ASSETS = [
   "./",
   "index.html",
